@@ -1,8 +1,9 @@
+
 export const translations = {
   en: {
     welcome: "Welcome to Adivasi Vikas Bhavan",
-    subtitle:
-      "Book appointments quickly and easily without waiting in long queues.",
+    subtitle: "Book appointments quickly and easily without waiting in long queues.",
+    government: "Government of Maharashtra",
     bookAppointment: "Book Appointment",
     chooseType: "Choose Appointment Type",
     today: "Book Appointment Today",
@@ -15,13 +16,23 @@ export const translations = {
     queue: "Queue Position",
     wait: "Estimated Wait",
     track: "Track Appointment",
-    calendar: "Add to Calendar"
+    calendar: "Add to Calendar",
+    selectDate: "Select Date",
+    selectSlot: "Select Time Slot",
+    fullName: "Full Name",
+    mobile: "Mobile Number",
+    notes: "Additional Notes",
+    continue: "Continue",
+    officer: "Officer",
+    date: "Date",
+    time: "Time",
+    appointmentId: "Appointment ID"
   },
 
   mr: {
-    welcome: "आदिवासी भवनात आपले स्वागत आहे",
-    subtitle:
-      "लांब रांगेत न थांबता सहज भेटीची वेळ बुक करा.",
+    welcome: "आदिवासी विकास भवनात आपले स्वागत आहे",
+    subtitle: "लांब रांगेत न थांबता सहज भेटीची वेळ बुक करा.",
+    government: "महाराष्ट्र शासन",
     bookAppointment: "भेटीची वेळ बुक करा",
     chooseType: "भेटीचा प्रकार निवडा",
     today: "आजसाठी भेट बुक करा",
@@ -32,15 +43,25 @@ export const translations = {
     confirm: "भेट निश्चित करा",
     confirmed: "भेट निश्चित झाली",
     queue: "रांगेतील क्रमांक",
-    wait: "अंदाजे प्रतीक्षा",
+    wait: "अंदाजे प्रतीक्षा वेळ",
     track: "भेट ट्रॅक करा",
-    calendar: "कॅलेंडरमध्ये जोडा"
+    calendar: "कॅलेंडरमध्ये जोडा",
+    selectDate: "तारीख निवडा",
+    selectSlot: "वेळ निवडा",
+    fullName: "पूर्ण नाव",
+    mobile: "मोबाईल क्रमांक",
+    notes: "अतिरिक्त माहिती",
+    continue: "पुढे जा",
+    officer: "अधिकारी",
+    date: "तारीख",
+    time: "वेळ",
+    appointmentId: "भेट आयडी"
   },
 
   hi: {
-    welcome: "आदिवासी भवन में आपका स्वागत है",
-    subtitle:
-      "लंबी कतारों में इंतजार किए बिना अपॉइंटमेंट बुक करें।",
+    welcome: "आदिवासी विकास भवन में आपका स्वागत है",
+    subtitle: "लंबी कतारों में इंतजार किए बिना अपॉइंटमेंट बुक करें।",
+    government: "महाराष्ट्र सरकार",
     bookAppointment: "अपॉइंटमेंट बुक करें",
     chooseType: "अपॉइंटमेंट का प्रकार चुनें",
     today: "आज के लिए अपॉइंटमेंट बुक करें",
@@ -51,8 +72,18 @@ export const translations = {
     confirm: "अपॉइंटमेंट की पुष्टि करें",
     confirmed: "अपॉइंटमेंट कन्फर्म हो गई",
     queue: "कतार में स्थान",
-    wait: "अनुमानित प्रतीक्षा",
+    wait: "अनुमानित प्रतीक्षा समय",
     track: "अपॉइंटमेंट ट्रैक करें",
-    calendar: "कैलेंडर में जोड़ें"
+    calendar: "कैलेंडर में जोड़ें",
+    selectDate: "तारीख चुनें",
+    selectSlot: "समय चुनें",
+    fullName: "पूरा नाम",
+    mobile: "मोबाइल नंबर",
+    notes: "अतिरिक्त जानकारी",
+    continue: "आगे बढ़ें",
+    officer: "अधिकारी",
+    date: "तारीख",
+    time: "समय",
+    appointmentId: "अपॉइंटमेंट आईडी"
   }
 };

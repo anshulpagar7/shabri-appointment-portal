@@ -1,21 +1,25 @@
 import { useState } from "react";
+import Header from "../components/Header";
+import { translations } from "../translations";
 
 export default function CitizenBooking() {
-  const [step, setStep] = useState(1);
+  const [language, setLanguage] = useState("en");
+  const [step, setStep] = useState(0);
 
   const [appointmentType, setAppointmentType] = useState("");
   const [selectedOfficer, setSelectedOfficer] = useState("");
-  const [purpose, setPurpose] = useState("");
-
+  const [selectedPurpose, setSelectedPurpose] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedSlot, setSelectedSlot] = useState("");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [notes, setNotes] = useState("");
 
+  const t = translations[language];
+
   const officers = [
-    "CEO Madam",
-    "Scholarship Officer",
-    "Education Officer",
-    "Employment Officer",
+    { name: "Leena Bansod Madam", role: "Chief Executive Officer" },
+    { name: "Anshul Pagar", role: "Officer" }
   ];
 
   const purposes = [
@@ -24,32 +28,38 @@ export default function CitizenBooking() {
     "Employment",
     "Certificate",
     "Complaint",
-    "Other",
+    "Other"
   ];
 
-  const appointmentId =
-    "SHA-" + Math.floor(1000 + Math.random() * 9000);
+  const timeSlots = [
+    "09:00 AM","09:10 AM","09:20 AM","09:30 AM",
+    "09:40 AM","09:50 AM","10:00 AM","10:10 AM",
+    "10:20 AM","10:30 AM","10:40 AM","10:50 AM"
+  ];
 
-  const queuePosition =
-    Math.floor(Math.random() * 20) + 1;
-
-  const estimatedWait = queuePosition * 10;
+  const appointmentId = "SHA-" + Math.floor(1000 + Math.random() * 9000);
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Shabri</h1>
+    <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
+      <Header language={language} setLanguage={setLanguage} />
 
-        <p style={styles.subtitle}>
-          Smart Appointment Management System
-        </p>
+      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "20px" }}>
 
-        {/* STEP 1 */}
+        {step === 0 && (
+          <div style={styles.card}>
+            <h1>{t.welcome}</h1>
+            <h3 style={{ color: "#666" }}>Government of Maharashtra</h3>
+            <p>{t.subtitle}</p>
+
+            <button style={styles.primaryButton} onClick={() => setStep(1)}>
+              {t.bookAppointment}
+            </button>
+          </div>
+        )}
+
         {step === 1 && (
-          <>
-            <h2 style={styles.heading}>
-              How would you like to book?
-            </h2>
+          <div style={styles.card}>
+            <h2>{t.chooseType}</h2>
 
             <button
               style={styles.primaryButton}
@@ -58,7 +68,7 @@ export default function CitizenBooking() {
                 setStep(2);
               }}
             >
-              🏢 Book Appointment for Today
+              🏢 {t.today}
             </button>
 
             <button
@@ -68,177 +78,147 @@ export default function CitizenBooking() {
                 setStep(2);
               }}
             >
-              📅 Book Future Appointment
+              📅 {t.future}
             </button>
-          </>
+          </div>
         )}
 
-        {/* STEP 2 */}
         {step === 2 && (
-          <>
-            <button
-              style={styles.backButton}
-              onClick={() => setStep(1)}
-            >
-              ← Back
-            </button>
-
-            <h2 style={styles.heading}>
-              Select Officer
-            </h2>
-
-            <div style={styles.infoBox}>
-              Appointment Type:
-              <strong>
-                {" "}
-                {appointmentType === "today"
-                  ? "Today's Appointment"
-                  : "Future Appointment"}
-              </strong>
-            </div>
+          <div style={styles.card}>
+            <h2>{t.meet}</h2>
 
             {officers.map((officer) => (
-              <button
-                key={officer}
-                style={styles.optionButton}
+              <div
+                key={officer.name}
+                style={styles.officerCard}
                 onClick={() => {
-                  setSelectedOfficer(officer);
+                  setSelectedOfficer(officer.name);
                   setStep(3);
                 }}
               >
-                {officer}
-              </button>
+                <h3>{officer.name}</h3>
+                <p>{officer.role}</p>
+              </div>
             ))}
-          </>
+          </div>
         )}
 
-        {/* STEP 3 */}
         {step === 3 && (
-          <>
-            <button
-              style={styles.backButton}
-              onClick={() => setStep(2)}
-            >
-              ← Back
-            </button>
+          <div style={styles.card}>
+            <h2>{t.purpose}</h2>
 
-            <h2 style={styles.heading}>
-              Select Purpose
-            </h2>
-
-            {purposes.map((item) => (
-              <button
-                key={item}
-                style={styles.optionButton}
-                onClick={() => {
-                  setPurpose(item);
-                  setStep(4);
-                }}
-              >
-                {item}
-              </button>
-            ))}
-          </>
+            <div style={styles.grid}>
+              {purposes.map((purpose) => (
+                <button
+                  key={purpose}
+                  style={styles.gridButton}
+                  onClick={() => {
+                    setSelectedPurpose(purpose);
+                    if (appointmentType === "future") {
+                      setStep(4);
+                    } else {
+                      setStep(5);
+                    }
+                  }}
+                >
+                  {purpose}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
-        {/* STEP 4 */}
         {step === 4 && (
-          <>
-            <button
-              style={styles.backButton}
-              onClick={() => setStep(3)}
-            >
-              ← Back
-            </button>
-
-            <h2 style={styles.heading}>
-              Enter Details
-            </h2>
+          <div style={styles.card}>
+            <h2>Select Date</h2>
 
             <input
-              type="text"
+              type="date"
+              style={styles.input}
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
+
+            <button
+              style={styles.primaryButton}
+              onClick={() => setStep(5)}
+            >
+              Continue
+            </button>
+          </div>
+        )}
+
+        {step === 5 && (
+          <div style={styles.card}>
+            <h2>Select Time Slot</h2>
+
+            <div style={styles.grid}>
+              {timeSlots.map((slot) => (
+                <button
+                  key={slot}
+                  style={styles.gridButton}
+                  onClick={() => {
+                    setSelectedSlot(slot);
+                    setStep(6);
+                  }}
+                >
+                  {slot}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {step === 6 && (
+          <div style={styles.card}>
+            <h2>{t.details}</h2>
+
+            <input
+              style={styles.input}
               placeholder="Full Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              style={styles.input}
             />
 
             <input
-              type="text"
+              style={styles.input}
               placeholder="Mobile Number"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
-              style={styles.input}
             />
 
             <textarea
-              placeholder="Additional Notes (Optional)"
+              style={styles.input}
+              placeholder="Additional Notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              style={styles.textarea}
             />
 
             <button
               style={styles.primaryButton}
-              onClick={() => {
-                if (!name || !mobile) {
-                  alert("Please fill all required fields");
-                  return;
-                }
-
-                setStep(5);
-              }}
+              onClick={() => setStep(7)}
             >
-              Confirm Appointment
+              {t.confirm}
             </button>
-          </>
+          </div>
         )}
 
-        {/* STEP 5 */}
-        {step === 5 && (
-          <>
-            <h2 style={styles.heading}>
-              🎉 Appointment Confirmed
-            </h2>
+        {step === 7 && (
+          <div style={styles.card}>
+            <h2>✅ {t.confirmed}</h2>
 
-            <div style={styles.successBox}>
-              <p>
-                <strong>Appointment ID:</strong>{" "}
-                {appointmentId}
-              </p>
+            <p><strong>ID:</strong> {appointmentId}</p>
+            <p><strong>Officer:</strong> {selectedOfficer}</p>
+            <p><strong>Purpose:</strong> {selectedPurpose}</p>
+            {selectedDate && <p><strong>Date:</strong> {selectedDate}</p>}
+            <p><strong>Time:</strong> {selectedSlot}</p>
+            <p><strong>{t.queue}:</strong> #12</p>
+            <p><strong>{t.wait}:</strong> 120 mins</p>
 
-              <p>
-                <strong>Officer:</strong>{" "}
-                {selectedOfficer}
-              </p>
-
-              <p>
-                <strong>Purpose:</strong>{" "}
-                {purpose}
-              </p>
-
-              <p>
-                <strong>Name:</strong> {name}
-              </p>
-
-              <p>
-                <strong>Queue Position:</strong> #
-                {queuePosition}
-              </p>
-
-              <p>
-                <strong>Estimated Wait:</strong>{" "}
-                {estimatedWait} mins
-              </p>
-            </div>
-
-            <button
-              style={styles.primaryButton}
-              onClick={() => window.location.reload()}
-            >
-              Book Another Appointment
+            <button style={styles.primaryButton}>
+              {t.calendar}
             </button>
-          </>
+          </div>
         )}
       </div>
     </div>
@@ -246,125 +226,57 @@ export default function CitizenBooking() {
 }
 
 const styles = {
-  container: {
-    minHeight: "100vh",
-    background: "#f5f7fb",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: "20px",
-  },
-
   card: {
-    width: "100%",
-    maxWidth: "500px",
     background: "white",
-    borderRadius: "20px",
     padding: "30px",
-    boxShadow: "0 8px 25px rgba(0,0,0,0.08)",
+    borderRadius: "16px",
+    marginTop: "15px",
+    boxShadow: "0 4px 10px rgba(0,0,0,0.08)"
   },
-
-  title: {
-    textAlign: "center",
-    color: "#1e3a8a",
-    fontSize: "52px",
-    marginBottom: "5px",
-  },
-
-  subtitle: {
-    textAlign: "center",
-    color: "#666",
-    marginBottom: "30px",
-  },
-
-  heading: {
-    textAlign: "center",
-    color: "#222",
-    marginBottom: "20px",
-  },
-
   primaryButton: {
     width: "100%",
-    padding: "16px",
-    marginBottom: "15px",
+    padding: "14px",
     border: "none",
-    borderRadius: "12px",
+    borderRadius: "10px",
     background: "#2563eb",
     color: "white",
-    fontSize: "16px",
-    fontWeight: "600",
     cursor: "pointer",
+    marginTop: "10px"
   },
-
   secondaryButton: {
     width: "100%",
-    padding: "16px",
-    marginBottom: "15px",
+    padding: "14px",
+    borderRadius: "10px",
     border: "2px solid #2563eb",
-    borderRadius: "12px",
     background: "white",
     color: "#2563eb",
-    fontSize: "16px",
-    fontWeight: "600",
     cursor: "pointer",
+    marginTop: "10px"
   },
-
-  optionButton: {
-    width: "100%",
-    padding: "15px",
-    marginBottom: "12px",
-    border: "1px solid #d1d5db",
-    borderRadius: "12px",
-    background: "#ffffff",
-    color: "#111827",
-    fontSize: "16px",
-    fontWeight: "500",
-    cursor: "pointer",
-  },
-
-  backButton: {
-    border: "none",
-    background: "transparent",
-    color: "#2563eb",
-    fontSize: "15px",
-    cursor: "pointer",
-    marginBottom: "20px",
-  },
-
-  input: {
-    width: "100%",
-    padding: "14px",
-    marginBottom: "12px",
-    borderRadius: "10px",
-    border: "1px solid #d1d5db",
-    fontSize: "15px",
-  },
-
-  textarea: {
-    width: "100%",
-    minHeight: "100px",
-    padding: "14px",
-    marginBottom: "15px",
-    borderRadius: "10px",
-    border: "1px solid #d1d5db",
-    fontSize: "15px",
-    resize: "vertical",
-  },
-
-  infoBox: {
-    padding: "12px",
-    background: "#eef4ff",
-    borderRadius: "10px",
-    marginBottom: "20px",
-    color: "#333",
-  },
-
-  successBox: {
-    background: "#dcfce7",
-    color: "#166534",
+  officerCard: {
+    border: "1px solid #ddd",
     borderRadius: "12px",
     padding: "20px",
-    marginBottom: "20px",
-    lineHeight: "1.8",
+    marginTop: "12px",
+    cursor: "pointer"
   },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))",
+    gap: "10px"
+  },
+  gridButton: {
+    padding: "12px",
+    borderRadius: "10px",
+    border: "1px solid #ddd",
+    background: "white",
+    cursor: "pointer"
+  },
+  input: {
+    width: "100%",
+    padding: "12px",
+    marginTop: "10px",
+    borderRadius: "10px",
+    border: "1px solid #ddd"
+  }
 };
