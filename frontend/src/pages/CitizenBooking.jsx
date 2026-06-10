@@ -43,13 +43,14 @@ export default function CitizenBooking() {
     <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
       <Header language={language} setLanguage={setLanguage} />
 
-      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "20px" }}>
+      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "20px" }}>
 
         {step === 0 && (
-          <div style={styles.card}>
-            <h1>{t.welcome}</h1>
+          <div style={{...styles.card, textAlign:"center", padding:"60px 40px"}}>
+            <p style={styles.step}>Step 1/7</p>
+            <h1 style={{fontSize:"48px", marginBottom:"10px"}}>{t.welcome}</h1>
             <h3 style={{ color: "#666" }}>Government of Maharashtra</h3>
-            <p>{t.subtitle}</p>
+            <p style={{fontSize:"20px", color:"#555"}}>{t.subtitle}</p>
 
             <button style={styles.primaryButton} onClick={() => setStep(1)}>
               {t.bookAppointment}
@@ -59,25 +60,14 @@ export default function CitizenBooking() {
 
         {step === 1 && (
           <div style={styles.card}>
+            <p style={styles.step}>Step 2/7</p>
             <h2>{t.chooseType}</h2>
 
-            <button
-              style={styles.primaryButton}
-              onClick={() => {
-                setAppointmentType("today");
-                setStep(2);
-              }}
-            >
+            <button style={styles.primaryButton} onClick={() => {setAppointmentType("today");setStep(2);}}>
               🏢 {t.today}
             </button>
 
-            <button
-              style={styles.secondaryButton}
-              onClick={() => {
-                setAppointmentType("future");
-                setStep(2);
-              }}
-            >
+            <button style={styles.secondaryButton} onClick={() => {setAppointmentType("future");setStep(2);}}>
               📅 {t.future}
             </button>
           </div>
@@ -85,6 +75,7 @@ export default function CitizenBooking() {
 
         {step === 2 && (
           <div style={styles.card}>
+            <p style={styles.step}>Step 3/7</p>
             <h2>{t.meet}</h2>
 
             {officers.map((officer) => (
@@ -105,20 +96,17 @@ export default function CitizenBooking() {
 
         {step === 3 && (
           <div style={styles.card}>
+            <p style={styles.step}>Step 4/7</p>
             <h2>{t.purpose}</h2>
 
-            <div style={styles.grid}>
+            <div style={styles.verticalList}>
               {purposes.map((purpose) => (
                 <button
                   key={purpose}
-                  style={styles.gridButton}
+                  style={styles.verticalButton}
                   onClick={() => {
                     setSelectedPurpose(purpose);
-                    if (appointmentType === "future") {
-                      setStep(4);
-                    } else {
-                      setStep(5);
-                    }
+                    appointmentType === "future" ? setStep(4) : setStep(5);
                   }}
                 >
                   {purpose}
@@ -130,6 +118,7 @@ export default function CitizenBooking() {
 
         {step === 4 && (
           <div style={styles.card}>
+            <p style={styles.step}>Step 5/7</p>
             <h2>Select Date</h2>
 
             <input
@@ -139,10 +128,7 @@ export default function CitizenBooking() {
               onChange={(e) => setSelectedDate(e.target.value)}
             />
 
-            <button
-              style={styles.primaryButton}
-              onClick={() => setStep(5)}
-            >
+            <button style={styles.primaryButton} onClick={() => setStep(5)}>
               Continue
             </button>
           </div>
@@ -150,9 +136,10 @@ export default function CitizenBooking() {
 
         {step === 5 && (
           <div style={styles.card}>
+            <p style={styles.step}>Step 6/7</p>
             <h2>Select Time Slot</h2>
 
-            <div style={styles.grid}>
+            <div style={styles.slotGrid}>
               {timeSlots.map((slot) => (
                 <button
                   key={slot}
@@ -171,6 +158,7 @@ export default function CitizenBooking() {
 
         {step === 6 && (
           <div style={styles.card}>
+            <p style={styles.step}>Step 7/7</p>
             <h2>{t.details}</h2>
 
             <input
@@ -194,10 +182,7 @@ export default function CitizenBooking() {
               onChange={(e) => setNotes(e.target.value)}
             />
 
-            <button
-              style={styles.primaryButton}
-              onClick={() => setStep(7)}
-            >
+            <button style={styles.primaryButton} onClick={() => setStep(7)}>
               {t.confirm}
             </button>
           </div>
@@ -206,7 +191,6 @@ export default function CitizenBooking() {
         {step === 7 && (
           <div style={styles.card}>
             <h2>✅ {t.confirmed}</h2>
-
             <p><strong>ID:</strong> {appointmentId}</p>
             <p><strong>Officer:</strong> {selectedOfficer}</p>
             <p><strong>Purpose:</strong> {selectedPurpose}</p>
@@ -214,10 +198,6 @@ export default function CitizenBooking() {
             <p><strong>Time:</strong> {selectedSlot}</p>
             <p><strong>{t.queue}:</strong> #12</p>
             <p><strong>{t.wait}:</strong> 120 mins</p>
-
-            <button style={styles.primaryButton}>
-              {t.calendar}
-            </button>
           </div>
         )}
       </div>
@@ -226,57 +206,73 @@ export default function CitizenBooking() {
 }
 
 const styles = {
-  card: {
-    background: "white",
-    padding: "30px",
-    borderRadius: "16px",
-    marginTop: "15px",
-    boxShadow: "0 4px 10px rgba(0,0,0,0.08)"
+  step:{color:"#666",fontWeight:"600"},
+  card:{
+    background:"white",
+    padding:"40px",
+    paddingBottom:"40px",
+    borderRadius:"16px",
+    marginTop:"25px",
+    boxShadow:"0 4px 10px rgba(0,0,0,0.08)"
   },
-  primaryButton: {
-    width: "100%",
-    padding: "14px",
-    border: "none",
-    borderRadius: "10px",
-    background: "#2563eb",
-    color: "white",
-    cursor: "pointer",
-    marginTop: "10px"
+  primaryButton:{
+    width:"100%",
+    padding:"18px",
+    fontSize:"18px",
+    border:"none",
+    borderRadius:"10px",
+    background:"#2563eb",
+    color:"white",
+    cursor:"pointer",
+    marginTop:"10px"
   },
-  secondaryButton: {
-    width: "100%",
-    padding: "14px",
-    borderRadius: "10px",
-    border: "2px solid #2563eb",
-    background: "white",
-    color: "#2563eb",
-    cursor: "pointer",
-    marginTop: "10px"
+  secondaryButton:{
+    width:"100%",
+    padding:"18px",
+    borderRadius:"10px",
+    border:"2px solid #2563eb",
+    background:"white",
+    color:"#2563eb",
+    cursor:"pointer",
+    marginTop:"10px"
   },
-  officerCard: {
-    border: "1px solid #ddd",
-    borderRadius: "12px",
-    padding: "20px",
-    marginTop: "12px",
-    cursor: "pointer"
+  officerCard:{
+    border:"1px solid #ddd",
+    borderRadius:"12px",
+    padding:"25px",
+    marginBottom:"15px",
+    cursor:"pointer"
   },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))",
-    gap: "10px"
+  verticalList:{
+    display:"flex",
+    flexDirection:"column",
+    gap:"12px"
   },
-  gridButton: {
-    padding: "12px",
-    borderRadius: "10px",
-    border: "1px solid #ddd",
-    background: "white",
-    cursor: "pointer"
+  verticalButton:{
+    width:"100%",
+    padding:"16px",
+    borderRadius:"10px",
+    border:"1px solid #ddd",
+    background:"white",
+    cursor:"pointer"
   },
-  input: {
-    width: "100%",
-    padding: "12px",
-    marginTop: "10px",
-    borderRadius: "10px",
-    border: "1px solid #ddd"
+  slotGrid:{
+    display:"grid",
+    gridTemplateColumns:"repeat(2,1fr)",
+    gap:"10px"
+  },
+  gridButton:{
+    padding:"16px",
+    borderRadius:"10px",
+    border:"1px solid #ddd",
+    background:"white",
+    cursor:"pointer"
+  },
+  input:{
+    width:"100%",
+    padding:"12px",
+    marginTop:"10px",
+    borderRadius:"10px",
+    border:"1px solid #ddd"
   }
 };
