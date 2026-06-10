@@ -2,58 +2,125 @@ export default function StaffDashboard() {
   return (
     <div
       style={{
-        padding: "30px",
+        minHeight: "100vh",
         background: "#f8fafc",
-        minHeight: "100vh"
+        padding: "30px"
       }}
     >
-      <h1>Staff Dashboard</h1>
+      <h1>Good Morning 👋</h1>
+
+      <p
+        style={{
+          color: "#666",
+          marginBottom: "30px"
+        }}
+      >
+        Welcome to Shabri Staff Portal
+      </p>
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4,1fr)",
-          gap: "20px",
-          marginTop: "20px"
+          gridTemplateColumns:
+            "repeat(auto-fit,minmax(220px,1fr))",
+          gap: "20px"
         }}
       >
-        <Card title="Appointments Today" value="48" />
-        <Card title="Completed" value="21" />
-        <Card title="Pending" value="22" />
-        <Card title="Cancelled" value="5" />
+        <StatCard
+          title="Appointments Today"
+          value="48"
+        />
+
+        <StatCard
+          title="Waiting"
+          value="18"
+        />
+
+        <StatCard
+          title="Completed"
+          value="21"
+        />
+
+        <StatCard
+          title="No Shows"
+          value="3"
+        />
       </div>
 
-      <h2 style={{ marginTop: "40px" }}>
-        Quick Actions
-      </h2>
+      <div
+        style={{
+          background: "white",
+          marginTop: "30px",
+          padding: "25px",
+          borderRadius: "16px"
+        }}
+      >
+        <h2>Current Queue Status</h2>
+
+        <h1
+          style={{
+            color: "#2563eb"
+          }}
+        >
+          Token #12
+        </h1>
+
+        <p>
+          Currently meeting:
+          <strong> Rahul Sharma</strong>
+        </p>
+
+        <p>
+          Estimated waiting visitors:
+          <strong> 18</strong>
+        </p>
+      </div>
 
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(2,1fr)",
-          gap: "20px",
-          marginTop: "20px"
+          marginTop: "30px"
         }}
       >
-        <ActionCard text="View Appointments" />
-        <ActionCard text="Schedule Appointment" />
-        <ActionCard text="Add Holiday" />
-        <ActionCard text="Generate Report" />
+        <h2>Quick Actions</h2>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fit,minmax(250px,1fr))",
+            gap: "20px",
+            marginTop: "15px"
+          }}
+        >
+          <ActionCard text="📋 View Appointments" />
+          <ActionCard text="➕ Schedule Appointment" />
+          <ActionCard text="🏖 Add Holiday" />
+          <ActionCard text="📊 Reports" />
+        </div>
       </div>
     </div>
   );
 }
 
-function Card({ title, value }) {
+function StatCard({ title, value }) {
   return (
     <div
       style={{
         background: "white",
-        padding: "20px",
-        borderRadius: "12px"
+        padding: "25px",
+        borderRadius: "16px",
+        boxShadow:
+          "0 4px 10px rgba(0,0,0,0.08)"
       }}
     >
-      <h3>{title}</h3>
+      <p
+        style={{
+          color: "#666"
+        }}
+      >
+        {title}
+      </p>
+
       <h1>{value}</h1>
     </div>
   );
@@ -65,8 +132,10 @@ function ActionCard({ text }) {
       style={{
         background: "white",
         padding: "25px",
-        borderRadius: "12px",
-        cursor: "pointer"
+        borderRadius: "16px",
+        cursor: "pointer",
+        boxShadow:
+          "0 4px 10px rgba(0,0,0,0.08)"
       }}
     >
       <h3>{text}</h3>
