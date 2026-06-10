@@ -1,18 +1,18 @@
 import { useState } from "react";
+
 import Sidebar from "../../components/Sidebar";
-import Dashboard from "./Dashboard";
+import Dashboard from "./StaffDashboard";
 import Appointments from "./Appointments";
 
 export default function StaffLayout() {
-  const [active, setActive] =
-    useState("Dashboard");
+  const [active, setActive] = useState("Dashboard");
 
   return (
     <div
       style={{
         display: "flex",
-        background: "#0F172A",
-        minHeight: "100vh"
+        minHeight: "100vh",
+        background: "#0F172A"
       }}
     >
       <Sidebar
@@ -25,50 +25,52 @@ export default function StaffLayout() {
           flex: 1
         }}
       >
-        {active === "Dashboard" && (
-          <Dashboard />
-        )}
+        {active === "Dashboard" && <Dashboard />}
 
         {active === "Appointments" && (
           <Appointments />
         )}
 
         {active === "Schedule" && (
-          <div style={placeholder}>
-            Schedule Appointment
-          </div>
+          <Placeholder
+            title="Schedule Appointment"
+          />
         )}
 
         {active === "Holidays" && (
-          <div style={placeholder}>
-            Holiday Management
-          </div>
+          <Placeholder
+            title="Holiday Management"
+          />
         )}
 
         {active === "Events" && (
-          <div style={placeholder}>
-            Events Management
-          </div>
+          <Placeholder
+            title="Events Management"
+          />
         )}
 
         {active === "Reports" && (
-          <div style={placeholder}>
-            Reports
-          </div>
+          <Placeholder title="Reports" />
         )}
 
         {active === "Settings" && (
-          <div style={placeholder}>
-            Settings
-          </div>
+          <Placeholder title="Settings" />
         )}
       </div>
     </div>
   );
 }
 
-const placeholder = {
-  color: "white",
-  padding: "40px",
-  fontSize: "24px"
-};
+function Placeholder({ title }) {
+  return (
+    <div
+      style={{
+        color: "white",
+        padding: "40px"
+      }}
+    >
+      <h1>{title}</h1>
+      <p>Coming Soon...</p>
+    </div>
+  );
+}

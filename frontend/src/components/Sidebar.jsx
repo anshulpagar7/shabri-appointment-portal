@@ -1,4 +1,7 @@
-export default function Sidebar({ active, setActive }) {
+export default function Sidebar({
+  active,
+  setActive
+}) {
   const menuItems = [
     "Dashboard",
     "Appointments",
@@ -16,14 +19,12 @@ export default function Sidebar({ active, setActive }) {
         background: "#111827",
         color: "white",
         minHeight: "100vh",
-        padding: "24px",
-        borderRight: "1px solid #1f2937"
+        padding: "24px"
       }}
     >
       <h1
         style={{
-          color: "#3B82F6",
-          marginBottom: "4px"
+          color: "#3B82F6"
         }}
       >
         SHABRI
@@ -31,32 +32,38 @@ export default function Sidebar({ active, setActive }) {
 
       <p
         style={{
-          color: "#94A3B8",
-          fontSize: "14px",
-          marginBottom: "40px"
+          color: "#94A3B8"
         }}
       >
         Smart Appointment Portal
       </p>
 
-      {menuItems.map((item) => (
-        <div
-          key={item}
-          onClick={() => setActive(item)}
-          style={{
-            padding: "14px",
-            marginBottom: "10px",
-            borderRadius: "10px",
-            cursor: "pointer",
-            background:
-              active === item
-                ? "#3B82F6"
-                : "transparent"
-          }}
-        >
-          {item}
-        </div>
-      ))}
+      <div
+        style={{
+          marginTop: "40px"
+        }}
+      >
+        {menuItems.map((item) => (
+          <div
+            key={item}
+            onClick={() =>
+              setActive(item)
+            }
+            style={{
+              padding: "14px",
+              marginBottom: "10px",
+              borderRadius: "10px",
+              cursor: "pointer",
+              background:
+                active === item
+                  ? "#3B82F6"
+                  : "transparent"
+            }}
+          >
+            {item}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

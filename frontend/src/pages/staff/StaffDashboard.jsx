@@ -1,21 +1,28 @@
-export default function StaffDashboard() {
+export default function Dashboard() {
   return (
     <div
       style={{
-        minHeight: "100vh",
-        background: "#f8fafc",
-        padding: "30px"
+        padding: "30px",
+        color: "white",
+        background: "#0F172A",
+        minHeight: "100vh"
       }}
     >
-      <h1>Good Morning 👋</h1>
+      <h1
+        style={{
+          marginBottom: "8px"
+        }}
+      >
+        Dashboard
+      </h1>
 
       <p
         style={{
-          color: "#666",
+          color: "#94A3B8",
           marginBottom: "30px"
         }}
       >
-        Welcome to Shabri Staff Portal
+        Smart Appointment Management
       </p>
 
       <div
@@ -29,93 +36,147 @@ export default function StaffDashboard() {
         <StatCard
           title="Appointments Today"
           value="48"
+          color="#3B82F6"
         />
 
         <StatCard
           title="Waiting"
           value="18"
+          color="#F59E0B"
         />
 
         <StatCard
           title="Completed"
           value="21"
+          color="#22C55E"
         />
 
         <StatCard
           title="No Shows"
           value="3"
+          color="#EF4444"
         />
       </div>
 
       <div
         style={{
-          background: "white",
-          marginTop: "30px",
-          padding: "25px",
-          borderRadius: "16px"
+          display: "grid",
+          gridTemplateColumns:
+            "2fr 1fr",
+          gap: "20px",
+          marginTop: "25px"
         }}
       >
-        <h2>Current Queue Status</h2>
+        <div style={card}>
+          <h2>Current Queue</h2>
 
-        <h1
-          style={{
-            color: "#2563eb"
-          }}
-        >
-          Token #12
-        </h1>
+          <h1
+            style={{
+              color: "#3B82F6"
+            }}
+          >
+            Token #12
+          </h1>
 
-        <p>
-          Currently meeting:
-          <strong> Rahul Sharma</strong>
-        </p>
+          <p>
+            Currently Serving:
+            <strong>
+              {" "}Rahul Sharma
+            </strong>
+          </p>
 
-        <p>
-          Estimated waiting visitors:
-          <strong> 18</strong>
-        </p>
+          <p>
+            Waiting Visitors:
+            <strong>
+              {" "}18
+            </strong>
+          </p>
+        </div>
+
+        <div style={card}>
+          <h2>Upcoming Events</h2>
+
+          <p>
+            Scholarship Camp
+          </p>
+
+          <p>
+            Tribal Welfare Drive
+          </p>
+
+          <p>
+            Education Workshop
+          </p>
+        </div>
       </div>
 
       <div
         style={{
-          marginTop: "30px"
+          ...card,
+          marginTop: "25px"
         }}
       >
-        <h2>Quick Actions</h2>
+        <h2>
+          Today's Appointments
+        </h2>
 
-        <div
+        <table
           style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit,minmax(250px,1fr))",
-            gap: "20px",
-            marginTop: "15px"
+            width: "100%",
+            marginTop: "20px"
           }}
         >
-          <ActionCard text="📋 View Appointments" />
-          <ActionCard text="➕ Schedule Appointment" />
-          <ActionCard text="🏖 Add Holiday" />
-          <ActionCard text="📊 Reports" />
-        </div>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr>
+              <td>Rahul Sharma</td>
+              <td>09:00 AM</td>
+              <td>Approved</td>
+            </tr>
+
+            <tr>
+              <td>Priya Patil</td>
+              <td>09:10 AM</td>
+              <td>Waiting</td>
+            </tr>
+
+            <tr>
+              <td>Amit Kumar</td>
+              <td>09:20 AM</td>
+              <td>Completed</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
-function StatCard({ title, value }) {
+function StatCard({
+  title,
+  value,
+  color
+}) {
   return (
     <div
       style={{
-        background: "white",
-        padding: "25px",
+        background: "#1E293B",
+        padding: "24px",
         borderRadius: "16px",
-        boxShadow:
-          "0 4px 10px rgba(0,0,0,0.08)"
+        borderLeft:
+          `5px solid ${color}`
       }}
     >
       <p
         style={{
-          color: "#666"
+          color: "#94A3B8"
         }}
       >
         {title}
@@ -126,19 +187,8 @@ function StatCard({ title, value }) {
   );
 }
 
-function ActionCard({ text }) {
-  return (
-    <div
-      style={{
-        background: "white",
-        padding: "25px",
-        borderRadius: "16px",
-        cursor: "pointer",
-        boxShadow:
-          "0 4px 10px rgba(0,0,0,0.08)"
-      }}
-    >
-      <h3>{text}</h3>
-    </div>
-  );
-}
+const card = {
+  background: "#1E293B",
+  padding: "24px",
+  borderRadius: "16px"
+};

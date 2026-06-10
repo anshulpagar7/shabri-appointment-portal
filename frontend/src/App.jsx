@@ -18,24 +18,38 @@ function App() {
           background: "#e5e7eb"
         }}
       >
-        <button onClick={() => setPage("citizen")}>
+        <button
+          onClick={() => setPage("citizen")}
+        >
           Citizen Portal
         </button>
 
-        <button onClick={() => setPage("staff-login")}>
+        <button
+          onClick={() => setPage("staff-login")}
+        >
           Staff Login
         </button>
 
-        <button onClick={() => setPage("staff-dashboard")}>
+        <button
+          onClick={() =>
+            setPage("staff-dashboard")
+          }
+        >
           Staff Portal
         </button>
       </div>
 
-      {page === "citizen" && <CitizenBooking />}
+      {page === "citizen" && (
+        <CitizenBooking />
+      )}
 
-      {page === "staff-login" && <StaffLogin />}
+      {page === "staff-login" && (
+        <StaffLogin />
+      )}
 
-      {page === "staff-dashboard" && <StaffLayout />}
+      {page === "staff-dashboard" && (
+        <StaffLayout />
+      )}
     </div>
   );
 }
