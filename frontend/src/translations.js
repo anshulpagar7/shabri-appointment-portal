@@ -1,7 +1,7 @@
 
 export const translations = {
   en: {
-    welcome: "Welcome to Adivasi Vikas Bhavan",
+    welcome: "Welcome to Maharashtra State Cooperative Tribal Development Corporation Limited",
     subtitle: "Book appointments quickly and easily without waiting in long queues.",
     government: "Government of Maharashtra",
     bookAppointment: "Book Appointment",
@@ -30,7 +30,7 @@ export const translations = {
   },
 
   mr: {
-    welcome: "आदिवासी विकास भवनात आपले स्वागत आहे",
+    welcome: "महाराष्ट्र राज्य सहकारी आदिवासी विकास महामंडळ मर्यादित मध्ये आपले स्वागत आहे",
     subtitle: "लांब रांगेत न थांबता सहज भेटीची वेळ बुक करा.",
     government: "महाराष्ट्र शासन",
     bookAppointment: "भेटीची वेळ बुक करा",
@@ -59,7 +59,7 @@ export const translations = {
   },
 
   hi: {
-    welcome: "आदिवासी विकास भवन में आपका स्वागत है",
+    welcome: "महाराष्ट्र राज्य सहकारी आदिवासी विकास निगम लिमिटेड में आपका स्वागत है",
     subtitle: "लंबी कतारों में इंतजार किए बिना अपॉइंटमेंट बुक करें।",
     government: "महाराष्ट्र सरकार",
     bookAppointment: "अपॉइंटमेंट बुक करें",
