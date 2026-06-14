@@ -10,6 +10,7 @@ import HolidayManagement from "./HolidayManagement";
 import Events from "./Events";
 import Reports from "./Reports";
 import Notifications from "./Notifications";
+import ExecutiveMeetings from "./ExecutiveMeetings";
 
 export default function StaffLayout() {
   const [active, setActive] = useState("Dashboard");
@@ -34,6 +35,9 @@ export default function StaffLayout() {
       case "Events":
         return <Events />;
 
+      case "Executive Meetings":
+        return <ExecutiveMeetings />;
+
       case "Reports":
         return <Reports />;
 
@@ -42,11 +46,7 @@ export default function StaffLayout() {
 
       case "Settings":
         return (
-          <div
-            style={{
-              padding: "40px",
-            }}
-          >
+          <div style={{ padding: "40px" }}>
             <h1>Settings</h1>
 
             <div
@@ -61,55 +61,29 @@ export default function StaffLayout() {
             >
               <h2>Office Timings</h2>
 
-              <p>
-                Morning Session:
-                11:00 AM - 1:30 PM
-              </p>
+              <p>Morning Session: 11:00 AM - 1:30 PM</p>
 
-              <p>
-                Lunch Break:
-                1:30 PM - 2:30 PM
-              </p>
+              <p>Lunch Break: 1:30 PM - 2:30 PM</p>
 
-              <p>
-                Evening Session:
-                2:30 PM - 5:00 PM
-              </p>
+              <p>Evening Session: 2:30 PM - 5:00 PM</p>
 
-              <hr
-                style={{
-                  margin: "20px 0",
-                }}
-              />
+              <hr style={{ margin: "20px 0" }} />
 
-              <h2>
-                Notification Settings
-              </h2>
+              <h2>Notification Settings</h2>
 
-              <p>
-                WhatsApp Notifications:
-                Enabled
-              </p>
+              <p>WhatsApp Notifications: Enabled</p>
 
-              <p>
-                SMS Notifications:
-                Enabled
-              </p>
+              <p>SMS Notifications: Enabled</p>
 
               <button
                 style={{
-                  background:
-                    "#2563EB",
+                  background: "#2563EB",
                   color: "white",
                   border: "none",
-                  padding:
-                    "12px 20px",
-                  borderRadius:
-                    "12px",
-                  cursor:
-                    "pointer",
-                  marginTop:
-                    "15px",
+                  padding: "12px 20px",
+                  borderRadius: "12px",
+                  cursor: "pointer",
+                  marginTop: "15px",
                 }}
               >
                 Save Settings
