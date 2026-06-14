@@ -4,18 +4,10 @@
 
 2. SMS Notifications
 
-3. Online Appointment Rescheduling
+3. QR Code Based Check-In
 
 4. Real-Time Queue Tracking
 
-5. Email Notifications
+5. Appointment Rescheduling
 
-6. QR Code Based Check-In
-
-7. Appointment History Tracking
-
-8. Citizen Feedback System
-
-9. Cloud Deployment
-
-10. Advanced Analytics Dashboard
+6. Cloud Deployment
