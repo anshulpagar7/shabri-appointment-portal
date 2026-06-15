@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
+
 import Header from "../components/Header";
+
 import { translations } from "../translations";
+
+import { supabase } from "../lib/supabase";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -194,6 +198,47 @@ export default function CitizenBooking() {
   const [appointmentId] = useState("SHA-" + Math.floor(1000 + Math.random() * 9000));
 
   const t = translations[language];
+
+  const saveAppointment = async () => {
+    const bookingDate =
+      appointmentType === "today"
+        ? new Date()
+            .toISOString()
+            .split("T")[0]
+        : selectedDate;
+
+    const { data, error } =
+      await supabase
+        .from("appointments")
+        .insert({
+          appointment_id:
+            appointmentId,
+          citizen_name:
+            name,
+          mobile:
+            mobile,
+          purpose:
+            selectedPurpose,
+          appointment_date:
+            bookingDate,
+          appointment_time:
+            selectedSlot,
+          officer_name:
+            OFFICER.name,
+          status:
+            "Waiting",
+        });
+
+    if (error) {
+      console.log(error);
+      alert(
+        "Failed to book appointment"
+      );
+      return;
+    }
+
+    setStep(6);
+  };
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -508,7 +553,10 @@ export default function CitizenBooking() {
               onBlur={(e) => (e.target.style.borderColor = "#D1D5DB")}
             />
           </div>
-          <PrimaryButton onClick={() => setStep(6)} disabled={!name.trim() || !mobile.trim()}>
+          <PrimaryButton
+            onClick={saveAppointment}
+            disabled={!name.trim() || !mobile.trim()}
+          >
             {t.confirm}
           </PrimaryButton>
         </Card>
