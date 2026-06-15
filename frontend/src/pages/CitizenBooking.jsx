@@ -227,6 +227,7 @@ export default function CitizenBooking() {
             OFFICER.name,
           status:
             "Waiting",
+          queue_status:"Waiting",  
         });
 
     if (error) {
