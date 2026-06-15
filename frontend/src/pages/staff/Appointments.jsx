@@ -1,42 +1,67 @@
-import { useState } from "react";
-
-const ALL_APPOINTMENTS = [
-  { id: "SHA-1001", name: "Rahul Sharma", mobile: "9876543210", officer: "Leena Bansod", purpose: "Scholarship", time: "09:00 AM", status: "Pending" },
-  { id: "SHA-1002", name: "Priya Patil", mobile: "9876543211", officer: "Leena Bansod", purpose: "Certificate", time: "09:10 AM", status: "Approved" },
-  { id: "SHA-1003", name: "Amit Kumar", mobile: "9876543212", officer: "Anshul Pagar", purpose: "Employment", time: "09:20 AM", status: "Completed" },
-  { id: "SHA-1004", name: "Sneha Joshi", mobile: "9876543213", officer: "Leena Bansod", purpose: "Education", time: "09:30 AM", status: "Pending" },
-  { id: "SHA-1005", name: "Vikram Singh", mobile: "9876543214", officer: "Anshul Pagar", purpose: "Complaint", time: "09:40 AM", status: "No Show" },
-  { id: "SHA-1006", name: "Anjali More", mobile: "9876543215", officer: "Leena Bansod", purpose: "Scholarship", time: "09:50 AM", status: "Approved" },
-  { id: "SHA-1007", name: "Rohan Desai", mobile: "9876543216", officer: "Anshul Pagar", purpose: "Certificate", time: "10:00 AM", status: "Completed" },
-];
+import { useState, useEffect } from "react";
+import { supabase } from "../../lib/supabase";
 
 const STATUS_CONFIG = {
-  Pending:   { bg: "#FEF3C7", color: "#D97706", dot: "#F59E0B" },
-  Approved:  { bg: "#EFF6FF", color: "#2563EB", dot: "#2563EB" },
+  Waiting:   { bg: "#FEF3C7", color: "#D97706", dot: "#F59E0B" },
+  "In Cabin": { bg: "#DBEAFE", color: "#2563EB", dot: "#2563EB" },
   Completed: { bg: "#ECFDF5", color: "#059669", dot: "#10B981" },
   "No Show": { bg: "#FEF2F2", color: "#DC2626", dot: "#EF4444" },
-  Cancelled: { bg: "#F5F3FF", color: "#7C3AED", dot: "#8B5CF6" },
 };
 
 export default function Appointments() {
-  const [appointments, setAppointments] = useState(ALL_APPOINTMENTS);
+  const [appointments, setAppointments] = useState([]);
+  const [cabinCitizen, setCabinCitizen] = useState(null);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterOfficer, setFilterOfficer] = useState("All");
 
-  const updateStatus = (id, newStatus) => {
-    setAppointments(prev =>
-      prev.map(a => a.id === id ? { ...a, status: newStatus } : a)
-    );
+  useEffect(() => {
+    fetchAppointments();
+  }, []);
+
+  const fetchAppointments = async () => {
+    const { data, error } = await supabase
+      .from("appointments")
+      .select("*")
+      .order("appointment_time", { ascending: true });
+
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    setAppointments(data);
+
+    const cabin = data.find(a => a.status === "In Cabin");
+    setCabinCitizen(cabin || null);
+  };
+
+  const updateStatus = async (appointment, newStatus) => {
+    if (newStatus === "In Cabin" && cabinCitizen) {
+      alert("Complete current citizen first");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("appointments")
+      .update({ status: newStatus })
+      .eq("id", appointment.id);
+
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    fetchAppointments();
   };
 
   const filtered = appointments.filter(a => {
     const matchSearch =
-      a.name.toLowerCase().includes(search.toLowerCase()) ||
-      a.id.toLowerCase().includes(search.toLowerCase()) ||
+      a.citizen_name.toLowerCase().includes(search.toLowerCase()) ||
+      a.appointment_id.toLowerCase().includes(search.toLowerCase()) ||
       a.mobile.includes(search);
     const matchStatus = filterStatus === "All" || a.status === filterStatus;
-    const matchOfficer = filterOfficer === "All" || a.officer === filterOfficer;
+    const matchOfficer = filterOfficer === "All" || a.officer_name === filterOfficer;
     return matchSearch && matchStatus && matchOfficer;
   });
 
@@ -57,7 +82,7 @@ export default function Appointments() {
 
       {/* Status Tabs */}
       <div style={styles.tabRow}>
-        {["All", "Pending", "Approved", "Completed", "No Show"].map(s => (
+        {["All", "Waiting", "In Cabin", "Completed", "No Show"].map(s => (
           <button
             key={s}
             onClick={() => setFilterStatus(s)}
@@ -134,20 +159,20 @@ export default function Appointments() {
                 return (
                   <tr key={a.id} style={styles.tr}>
                     <td style={styles.td}>
-                      <span style={styles.tokenId}>{a.id}</span>
+                      <span style={styles.tokenId}>{a.appointment_id}</span>
                     </td>
                     <td style={styles.td}>
                       <div style={styles.citizenCell}>
-                        <div style={styles.avatar}>{a.name[0]}</div>
-                        <span style={styles.citizenName}>{a.name}</span>
+                        <div style={styles.avatar}>{a.citizen_name[0]}</div>
+                        <span style={styles.citizenName}>{a.citizen_name}</span>
                       </div>
                     </td>
                     <td style={styles.td}><span style={styles.mono}>{a.mobile}</span></td>
-                    <td style={styles.td}><span style={styles.officerText}>{a.officer}</span></td>
+                    <td style={styles.td}><span style={styles.officerText}>{a.officer_name}</span></td>
                     <td style={styles.td}>
                       <span style={styles.purposeTag}>{a.purpose}</span>
                     </td>
-                    <td style={styles.td}><span style={styles.mono}>{a.time}</span></td>
+                    <td style={styles.td}><span style={styles.mono}>{a.appointment_time}</span></td>
                     <td style={styles.td}>
                       <span style={{ ...styles.statusBadge, background: sc.bg, color: sc.color }}>
                         <span style={{ ...styles.statusDot, background: sc.dot }} />
@@ -156,27 +181,28 @@ export default function Appointments() {
                     </td>
                     <td style={styles.td}>
                       <div style={styles.actionBtns}>
-                        {a.status !== "Approved" && a.status !== "Completed" && (
+                        {a.status === "Waiting" && (
                           <button
-                            onClick={() => updateStatus(a.id, "Approved")}
+                            onClick={() => updateStatus(a, "In Cabin")}
                             style={styles.actionBtnBlue}
                             title="Approve"
                           >Approve</button>
                         )}
-                        {a.status !== "Completed" && a.status !== "No Show" && (
-                          <button
-                            onClick={() => updateStatus(a.id, "Completed")}
-                            style={styles.actionBtnGreen}
-                            title="Complete"
-                          >Complete</button>
+                        {a.status === "In Cabin" && (
+                          <>
+                            <button
+                              onClick={() => updateStatus(a, "Completed")}
+                              style={styles.actionBtnGreen}
+                              title="Complete"
+                            >Complete</button>
+                            <button
+                              onClick={() => updateStatus(a, "No Show")}
+                              style={styles.actionBtnRed}
+                              title="No Show"
+                            >No Show</button>
+                          </>
                         )}
-                        {a.status !== "No Show" && a.status !== "Completed" && (
-                          <button
-                            onClick={() => updateStatus(a.id, "No Show")}
-                            style={styles.actionBtnRed}
-                            title="No Show"
-                          >No Show</button>
-                        )}
+                        {a.status === "Completed" && "✅"}
                       </div>
                     </td>
                   </tr>
