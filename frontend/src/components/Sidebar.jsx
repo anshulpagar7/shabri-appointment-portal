@@ -3,7 +3,6 @@ import { useState } from "react";
 const NAV_ITEMS = [
   { key: "Dashboard", label: "Dashboard", icon: "⊞" },
   { key: "Appointments", label: "Appointments", icon: "📋" },
-  { key: "Queue", label: "Queue Management", icon: "🔢" },
   { key: "Schedule", label: "Schedule Appointment", icon: "➕" },
   { key: "Executive Meetings", label: "Executive Meetings", icon: "🤝" },
   { key: "Holidays", label: "Holiday Management", icon: "📅" },
