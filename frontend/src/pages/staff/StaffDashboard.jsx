@@ -1,17 +1,60 @@
-export default function StaffDashboard() {
-  const stats = [
-    { label: "Appointments Today", value: "48", icon: "📋", color: "#2563EB", bg: "#EFF6FF", trend: "+12% vs yesterday" },
-    { label: "Waiting", value: "18", icon: "⏳", color: "#F59E0B", bg: "#FFFBEB", trend: "Next: Priya Patil" },
-    { label: "Completed", value: "21", icon: "✅", color: "#10B981", bg: "#ECFDF5", trend: "44% completion rate" },
-    { label: "No Shows", value: "3", icon: "❌", color: "#EF4444", bg: "#FEF2F2", trend: "6.25% no-show rate" },
-  ];
+import { useState, useEffect } from "react";
+import { supabase } from "../../lib/supabase";
 
-  const appointments = [
-    { name: "Rahul Sharma", purpose: "Scholarship", time: "09:00 AM", officer: "Leena Bansod", status: "Approved" },
-    { name: "Priya Patil", purpose: "Certificate", time: "09:10 AM", officer: "Leena Bansod", status: "Waiting" },
-    { name: "Amit Kumar", purpose: "Employment", time: "09:20 AM", officer: "Anshul Pagar", status: "Completed" },
-    { name: "Sneha Joshi", purpose: "Education", time: "09:30 AM", officer: "Leena Bansod", status: "Waiting" },
-    { name: "Vikram Singh", purpose: "Complaint", time: "09:40 AM", officer: "Anshul Pagar", status: "Pending" },
+export default function StaffDashboard() {
+  const [appointments, setAppointments] = useState([]);
+
+  useEffect(() => {
+    fetchAppointments();
+  }, []);
+
+  const fetchAppointments = async () => {
+    const { data, error } = await supabase
+      .from("appointments")
+      .select("*")
+      .order("appointment_time", { ascending: true });
+
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    setAppointments(data);
+  };
+
+  const stats = [
+    {
+      label: "Appointments Today",
+      value: appointments.length,
+      icon: "📋",
+      color: "#2563EB",
+      bg: "#EFF6FF",
+      trend: "Live data",
+    },
+    {
+      label: "Waiting",
+      value: appointments.filter(a => a.status === "Waiting").length,
+      icon: "⏳",
+      color: "#F59E0B",
+      bg: "#FFFBEB",
+      trend: "Live data",
+    },
+    {
+      label: "Completed",
+      value: appointments.filter(a => a.status === "Completed").length,
+      icon: "✅",
+      color: "#10B981",
+      bg: "#ECFDF5",
+      trend: "Live data",
+    },
+    {
+      label: "No Shows",
+      value: appointments.filter(a => a.status === "No Show").length,
+      icon: "❌",
+      color: "#EF4444",
+      bg: "#FEF2F2",
+      trend: "Live data",
+    },
   ];
 
   const meetings = [
@@ -67,7 +110,7 @@ export default function StaffDashboard() {
               </div>
             </div>
             <div style={{ ...styles.statBar, background: s.bg }}>
-              <div style={{ ...styles.statBarFill, background: s.color, width: `${(parseInt(s.value) / 48) * 100}%` }} />
+              <div style={{ ...styles.statBarFill, background: s.color, width: `${(parseInt(s.value) / (appointments.length || 1)) * 100}%` }} />
             </div>
             <p style={styles.statTrend}>{s.trend}</p>
           </div>
@@ -90,7 +133,7 @@ export default function StaffDashboard() {
             </div>
             <div style={styles.queueStats}>
               <div style={styles.queueStat}>
-                <span style={styles.queueStatNum}>18</span>
+                <span style={styles.queueStatNum}>{appointments.filter(a => a.status === "Waiting").length}</span>
                 <span style={styles.queueStatLabel}>Waiting</span>
               </div>
               <div style={styles.queueStatDivider} />
@@ -153,7 +196,7 @@ export default function StaffDashboard() {
         <div style={styles.tableHeader}>
           <p style={styles.cardEyebrow}>📋 TODAY'S APPOINTMENTS</p>
           <div style={styles.tableHeaderRight}>
-            <span style={styles.tableCount}>48 total</span>
+            <span style={styles.tableCount}>{appointments.length} total</span>
           </div>
         </div>
         <div style={{ overflowX: "auto", marginTop: "16px" }}>
@@ -172,13 +215,13 @@ export default function StaffDashboard() {
                   <tr key={i} style={styles.tr}>
                     <td style={styles.td}>
                       <div style={styles.citizenCell}>
-                        <div style={styles.avatar}>{a.name[0]}</div>
+                        <div style={styles.avatar}>{a.name?.[0]}</div>
                         <span style={styles.citizenName}>{a.name}</span>
                       </div>
                     </td>
                     <td style={styles.td}><span style={styles.purposeTag}>{a.purpose}</span></td>
                     <td style={styles.td}><span style={styles.officerText}>{a.officer}</span></td>
-                    <td style={styles.td}><span style={styles.timeText}>{a.time}</span></td>
+                    <td style={styles.td}><span style={styles.timeText}>{a.appointment_time}</span></td>
                     <td style={styles.td}>
                       <span style={{ ...styles.statusBadge, background: sc.bg, color: sc.color }}>
                         {a.status}
