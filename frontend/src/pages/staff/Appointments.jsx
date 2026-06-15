@@ -37,8 +37,13 @@ export default function Appointments() {
   };
 
   const updateStatus = async (appointment, newStatus) => {
-    if (newStatus === "In Cabin" && cabinCitizen) {
-      alert("Complete current citizen first");
+    if (newStatus === "In Cabin" && cabinCitizen && cabinCitizen.id !== appointment.id) {
+      alert("Please complete current citizen first.");
+      return;
+    }
+
+    if (!appointment?.id) {
+      console.log("updateStatus: missing primary key 'id' on appointment", appointment);
       return;
     }
 
@@ -48,7 +53,8 @@ export default function Appointments() {
       .eq("id", appointment.id);
 
     if (error) {
-      console.log(error);
+      console.log("updateStatus error:", error);
+      alert("Failed to update status: " + error.message);
       return;
     }
 
@@ -57,9 +63,9 @@ export default function Appointments() {
 
   const filtered = appointments.filter(a => {
     const matchSearch =
-      a.citizen_name.toLowerCase().includes(search.toLowerCase()) ||
-      a.appointment_id.toLowerCase().includes(search.toLowerCase()) ||
-      a.mobile.includes(search);
+      (a.citizen_name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (a.appointment_id || "").toLowerCase().includes(search.toLowerCase()) ||
+      (a.mobile || "").includes(search);
     const matchStatus = filterStatus === "All" || a.status === filterStatus;
     const matchOfficer = filterOfficer === "All" || a.officer_name === filterOfficer;
     return matchSearch && matchStatus && matchOfficer;
@@ -184,8 +190,13 @@ export default function Appointments() {
                         {a.status === "Waiting" && (
                           <button
                             onClick={() => updateStatus(a, "In Cabin")}
-                            style={styles.actionBtnBlue}
-                            title="Approve"
+                            style={{
+                              ...styles.actionBtnBlue,
+                              opacity: cabinCitizen ? 0.4 : 1,
+                              cursor: cabinCitizen ? "not-allowed" : "pointer",
+                            }}
+                            disabled={!!cabinCitizen}
+                            title={cabinCitizen ? "Please complete current citizen first." : "Approve"}
                           >Approve</button>
                         )}
                         {a.status === "In Cabin" && (
@@ -202,7 +213,12 @@ export default function Appointments() {
                             >No Show</button>
                           </>
                         )}
-                        {a.status === "Completed" && "✅"}
+                        {a.status === "Completed" && (
+                          <span style={{ color: "#10B981", fontSize: "16px" }} title="Completed">✅</span>
+                        )}
+                        {a.status === "No Show" && (
+                          <span style={{ color: "#EF4444", fontSize: "16px" }} title="No Show">🔴</span>
+                        )}
                       </div>
                     </td>
                   </tr>
