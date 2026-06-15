@@ -1,35 +1,78 @@
-import { useState } from "react";
-
-const INITIAL_QUEUE = [
-  { token: "SHA-1002", name: "Priya Patil", purpose: "Education Support", mobile: "9876543211", officer: "Leena Bansod" },
-  { token: "SHA-1003", name: "Amit Kumar", purpose: "Certificate Verification", mobile: "9876543212", officer: "Anshul Pagar" },
-  { token: "SHA-1004", name: "Sneha More", purpose: "Scholarship Query", mobile: "9876543213", officer: "Leena Bansod" },
-  { token: "SHA-1005", name: "Vikram Singh", purpose: "Employment Help", mobile: "9876543214", officer: "Anshul Pagar" },
-  { token: "SHA-1006", name: "Anjali More", purpose: "Document Submission", mobile: "9876543215", officer: "Leena Bansod" },
-];
+import { useEffect, useState } from "react";
+import { supabase } from "../../lib/supabase";
 
 export default function QueueManagement() {
-  const [current, setCurrent] = useState({ token: "SHA-1001", name: "Rahul Sharma", purpose: "Scholarship Query", officer: "Leena Bansod", status: "meeting" });
-  const [queue, setQueue] = useState(INITIAL_QUEUE);
-  const [completed, setCompleted] = useState(0);
-  const [noShows, setNoShows] = useState(0);
+  const [queue, setQueue] = useState([]);
+  const [insideCabin, setInsideCabin] = useState(null);
+  const [completed, setCompleted] = useState([]);
+  const [noShows, setNoShows] = useState([]);
 
-  const callNext = (action = "complete") => {
-    if (action === "complete") setCompleted(c => c + 1);
-    if (action === "noshow") setNoShows(n => n + 1);
-    if (queue.length > 0) {
-      const [next, ...rest] = queue;
-      setCurrent({ ...next, status: "arrived" });
-      setQueue(rest);
-    } else {
-      setCurrent(null);
+  useEffect(() => {
+    fetchQueue();
+  }, []);
+
+  const fetchQueue = async () => {
+    const { data, error } = await supabase
+      .from("appointments")
+      .select("*")
+      .order("appointment_time", { ascending: true });
+
+    if (error) {
+      console.log(error);
+      return;
     }
+
+    const waiting = data.filter(a => a.queue_status === "Waiting");
+    const cabin = data.find(a => a.queue_status === "In Cabin");
+    const completedList = data.filter(a => a.queue_status === "Completed");
+    const noShowList = data.filter(a => a.queue_status === "No Show");
+
+    setQueue(waiting);
+    setInsideCabin(cabin || null);
+    setCompleted(completedList);
+    setNoShows(noShowList);
   };
 
-  const statusConfig = {
-    arrived: { label: "Arrived", bg: "#ECFDF5", color: "#059669" },
-    meeting: { label: "In Meeting", bg: "#EFF6FF", color: "#2563EB" },
-    waiting: { label: "Waiting", bg: "#FEF3C7", color: "#D97706" },
+  const approveCitizen = async (citizen) => {
+    if (insideCabin) return;
+
+    await supabase
+      .from("appointments")
+      .update({ queue_status: "In Cabin" })
+      .eq("id", citizen.id);
+
+    fetchQueue();
+  };
+
+  const completeCitizen = async () => {
+    if (!insideCabin) return;
+
+    await supabase
+      .from("appointments")
+      .update({
+        queue_status: "Completed",
+        status: "Completed",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", insideCabin.id);
+
+    fetchQueue();
+  };
+
+  const noShowCitizen = async () => {
+    if (!insideCabin) return;
+
+    await supabase
+      .from("appointments")
+      .update({ queue_status: "No Show", status: "No Show" })
+      .eq("id", insideCabin.id);
+
+    fetchQueue();
+  };
+
+  const formatTime = (timestamp) => {
+    if (!timestamp) return "—";
+    return new Date(timestamp).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   };
 
   return (
@@ -49,69 +92,63 @@ export default function QueueManagement() {
 
       {/* Stats Row */}
       <div style={styles.statsRow}>
-        <StatMini icon="🔢" label="Current Token" value={current?.token || "—"} color="#2563EB" />
-        <StatMini icon="⏳" label="Waiting" value={queue.length.toString()} color="#F59E0B" />
-        <StatMini icon="✅" label="Completed" value={completed.toString()} color="#10B981" />
-        <StatMini icon="❌" label="No Shows" value={noShows.toString()} color="#EF4444" />
+        <StatMini icon="🔵" label="In Cabin" value={insideCabin ? insideCabin.token : "—"} color="#2563EB" />
+        <StatMini icon="🟡" label="Waiting" value={queue.length.toString()} color="#F59E0B" />
+        <StatMini icon="✅" label="Completed" value={completed.length.toString()} color="#10B981" />
+        <StatMini icon="❌" label="No Shows" value={noShows.length.toString()} color="#EF4444" />
         <StatMini icon="⏱️" label="Est. Wait" value={`${queue.length * 10} min`} color="#6366F1" />
       </div>
 
       <div style={styles.mainGrid}>
-        {/* Currently Serving */}
+        {/* Inside Cabin */}
         <div style={styles.servingCard}>
           <div style={styles.servingHeader}>
-            <p style={styles.cardEyebrow}>NOW SERVING</p>
-            {current && (
-              <span style={{ ...styles.statusPill, background: statusConfig[current.status]?.bg, color: statusConfig[current.status]?.color }}>
-                {statusConfig[current.status]?.label}
+            <p style={styles.cardEyebrow}>🔵 INSIDE CABIN</p>
+            {insideCabin && (
+              <span style={{ ...styles.statusPill, background: "#EFF6FF", color: "#2563EB" }}>
+                In Progress
               </span>
             )}
           </div>
 
-          {current ? (
+          {insideCabin ? (
             <>
               <div style={styles.tokenDisplay}>
                 <div style={styles.tokenCircle}>
-                  <span style={styles.tokenNum}>{current.token.split("-")[1]}</span>
-                  <span style={styles.tokenPrefix}>#{current.token.split("-")[0]}</span>
+                  <span style={styles.tokenNum}>{insideCabin.token?.split("-")[1]}</span>
+                  <span style={styles.tokenPrefix}>#{insideCabin.token?.split("-")[0]}</span>
                 </div>
                 <div style={styles.currentDetails}>
-                  <h2 style={styles.currentName}>{current.name}</h2>
-                  <p style={styles.currentPurpose}>{current.purpose}</p>
-                  <p style={styles.currentOfficer}>Officer: {current.officer}</p>
+                  <h2 style={styles.currentName}>{insideCabin.name}</h2>
+                  <p style={styles.currentPurpose}>{insideCabin.purpose}</p>
+                  <p style={styles.currentOfficer}>Officer: {insideCabin.officer}</p>
                 </div>
               </div>
 
               <div style={styles.actionRow}>
-                <button onClick={() => setCurrent({ ...current, status: "arrived" })} style={styles.btnGreen}>
-                  <span>✅</span> Mark Arrived
-                </button>
-                <button onClick={() => setCurrent({ ...current, status: "meeting" })} style={styles.btnBlue}>
-                  <span>▶</span> Start Meeting
-                </button>
-                <button onClick={() => callNext("noshow")} style={styles.btnRed}>
-                  <span>✕</span> No Show
-                </button>
-                <button onClick={() => callNext("complete")} style={styles.btnTeal}>
+                <button onClick={completeCitizen} style={styles.btnTeal}>
                   <span>✓</span> Complete
+                </button>
+                <button onClick={noShowCitizen} style={styles.btnRed}>
+                  <span>✕</span> No Show
                 </button>
               </div>
             </>
           ) : (
             <div style={styles.emptyServing}>
-              <span style={{ fontSize: "40px" }}>🎉</span>
-              <p style={{ margin: "12px 0 4px", fontWeight: "700", color: "#111827" }}>Queue is Empty</p>
-              <p style={{ margin: 0, color: "#64748B", fontSize: "14px" }}>All appointments completed for today</p>
+              <span style={{ fontSize: "40px" }}>🪑</span>
+              <p style={{ margin: "12px 0 4px", fontWeight: "700", color: "#111827" }}>Cabin is available</p>
+              <p style={{ margin: 0, color: "#64748B", fontSize: "14px" }}>Approve a citizen from the waiting queue to begin</p>
             </div>
           )}
         </div>
 
         {/* Next Visitor */}
         <div style={styles.nextCard}>
-          <p style={styles.cardEyebrow}>NEXT IN QUEUE</p>
+          <p style={styles.cardEyebrow}>🟡 NEXT IN QUEUE</p>
           {queue.length > 0 ? (
             <div style={styles.nextVisitor}>
-              <div style={styles.nextAvatar}>{queue[0].name[0]}</div>
+              <div style={styles.nextAvatar}>{queue[0].name?.[0]}</div>
               <div>
                 <p style={styles.nextName}>{queue[0].name}</p>
                 <p style={styles.nextPurpose}>{queue[0].purpose}</p>
@@ -125,7 +162,7 @@ export default function QueueManagement() {
           <div style={styles.queueMiniList}>
             <p style={{ ...styles.cardEyebrow, marginBottom: "10px" }}>UPCOMING</p>
             {queue.slice(1, 4).map((v, i) => (
-              <div key={v.token} style={styles.miniQueueItem}>
+              <div key={v.id} style={styles.miniQueueItem}>
                 <span style={styles.miniQueueNum}>{i + 2}</span>
                 <span style={styles.miniQueueName}>{v.name}</span>
                 <span style={styles.miniQueueToken}>{v.token}</span>
@@ -140,17 +177,24 @@ export default function QueueManagement() {
         </div>
       </div>
 
+      {/* Approve notice */}
+      {insideCabin && (
+        <div style={styles.noticeBar}>
+          <span>⚠️</span> Please complete the current citizen before approving another citizen.
+        </div>
+      )}
+
       {/* Full Queue Table */}
       <div style={styles.tableCard}>
         <div style={styles.tableHeader}>
-          <p style={styles.cardEyebrow}>WAITING QUEUE</p>
+          <p style={styles.cardEyebrow}>🟡 WAITING QUEUE</p>
           <span style={styles.countBadge}>{queue.length} visitors</span>
         </div>
         <div style={{ overflowX: "auto" }}>
           <table style={styles.table}>
             <thead>
               <tr>
-                {["#", "Token", "Citizen", "Purpose", "Officer", "Status"].map(h => (
+                {["#", "Token", "Citizen", "Purpose", "Officer", "Status", "Action"].map(h => (
                   <th key={h} style={styles.th}>{h}</th>
                 ))}
               </tr>
@@ -158,25 +202,120 @@ export default function QueueManagement() {
             <tbody>
               {queue.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: "32px", textAlign: "center", color: "#94A3B8" }}>
-                    Queue is empty
+                  <td colSpan={7} style={{ padding: "32px", textAlign: "center", color: "#94A3B8" }}>
+                    🎉 No waiting citizens
                   </td>
                 </tr>
               ) : queue.map((v, i) => (
-                <tr key={v.token} style={styles.tr}>
+                <tr key={v.id} style={styles.tr}>
                   <td style={styles.td}><span style={styles.posNum}>{i + 1}</span></td>
                   <td style={styles.td}><span style={styles.tokenTag}>{v.token}</span></td>
                   <td style={styles.td}>
                     <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                      <div style={styles.smAvatar}>{v.name[0]}</div>
+                      <div style={styles.smAvatar}>{v.name?.[0]}</div>
                       <span style={{ fontWeight: "600", color: "#111827" }}>{v.name}</span>
                     </div>
                   </td>
                   <td style={styles.td}>{v.purpose}</td>
                   <td style={styles.td}><span style={{ color: "#64748B", fontSize: "13px" }}>{v.officer}</span></td>
                   <td style={styles.td}>
-                    <span style={styles.waitingBadge}>Waiting</span>
+                    <span style={styles.waitingBadge}>🟡 Waiting</span>
                   </td>
+                  <td style={styles.td}>
+                    <button
+                      onClick={() => approveCitizen(v)}
+                      disabled={!!insideCabin}
+                      style={{
+                        ...styles.btnApprove,
+                        opacity: insideCabin ? 0.4 : 1,
+                        cursor: insideCabin ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      Approve
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Completed Today */}
+      <div style={styles.tableCard}>
+        <div style={styles.tableHeader}>
+          <p style={styles.cardEyebrow}>✅ COMPLETED TODAY</p>
+          <span style={styles.countBadge}>{completed.length} done</span>
+        </div>
+        <div style={{ overflowX: "auto" }}>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                {["Citizen", "Purpose", "Completed Time"].map(h => (
+                  <th key={h} style={styles.th}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {completed.length === 0 ? (
+                <tr>
+                  <td colSpan={3} style={{ padding: "32px", textAlign: "center", color: "#94A3B8" }}>
+                    No completed appointments yet
+                  </td>
+                </tr>
+              ) : completed.map(v => (
+                <tr key={v.id} style={styles.tr}>
+                  <td style={styles.td}>
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                      <div style={styles.smAvatar}>{v.name?.[0]}</div>
+                      <span style={{ fontWeight: "600", color: "#111827" }}>{v.name}</span>
+                    </div>
+                  </td>
+                  <td style={styles.td}>{v.purpose}</td>
+                  <td style={styles.td}>
+                    <span style={{ color: "#059669", fontWeight: "700", fontSize: "13px" }}>
+                      {formatTime(v.completed_at)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* No Show */}
+      <div style={styles.tableCard}>
+        <div style={styles.tableHeader}>
+          <p style={styles.cardEyebrow}>🔴 NO SHOW</p>
+          <span style={styles.countBadge}>{noShows.length} missed</span>
+        </div>
+        <div style={{ overflowX: "auto" }}>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                {["Citizen", "Purpose", "Token"].map(h => (
+                  <th key={h} style={styles.th}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {noShows.length === 0 ? (
+                <tr>
+                  <td colSpan={3} style={{ padding: "32px", textAlign: "center", color: "#94A3B8" }}>
+                    No no-shows recorded
+                  </td>
+                </tr>
+              ) : noShows.map(v => (
+                <tr key={v.id} style={styles.tr}>
+                  <td style={styles.td}>
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                      <div style={styles.smAvatar}>{v.name?.[0]}</div>
+                      <span style={{ fontWeight: "600", color: "#111827" }}>{v.name}</span>
+                    </div>
+                  </td>
+                  <td style={styles.td}>{v.purpose}</td>
+                  <td style={styles.td}><span style={styles.tokenTag}>{v.token}</span></td>
                 </tr>
               ))}
             </tbody>
@@ -227,10 +366,9 @@ const styles = {
   currentPurpose: { margin: "0 0 6px", fontSize: "14px", color: "#64748B" },
   currentOfficer: { margin: 0, fontSize: "13px", color: "#2563EB", fontWeight: "600" },
   actionRow: { display: "flex", gap: "12px", flexWrap: "wrap" },
-  btnGreen: { display: "flex", alignItems: "center", gap: "6px", background: "#ECFDF5", color: "#059669", border: "1.5px solid #A7F3D0", padding: "10px 16px", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "13px" },
-  btnBlue: { display: "flex", alignItems: "center", gap: "6px", background: "#EFF6FF", color: "#2563EB", border: "1.5px solid #BFDBFE", padding: "10px 16px", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "13px" },
   btnRed: { display: "flex", alignItems: "center", gap: "6px", background: "#FEF2F2", color: "#DC2626", border: "1.5px solid #FECACA", padding: "10px 16px", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "13px" },
   btnTeal: { display: "flex", alignItems: "center", gap: "6px", background: "linear-gradient(135deg,#0F766E,#0D9488)", color: "#fff", border: "none", padding: "10px 16px", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "13px" },
+  btnApprove: { display: "inline-flex", alignItems: "center", gap: "6px", background: "linear-gradient(135deg,#2563EB,#1E3A8A)", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "8px", fontWeight: "700", fontSize: "12px" },
   emptyServing: { textAlign: "center", padding: "40px 0" },
   nextCard: { background: "#fff", borderRadius: "16px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)" },
   nextVisitor: { display: "flex", gap: "14px", alignItems: "center", padding: "16px", background: "#F8FAFC", borderRadius: "12px", border: "1px solid #E2E8F0", margin: "14px 0 20px" },
@@ -243,7 +381,8 @@ const styles = {
   miniQueueNum: { width: "22px", height: "22px", borderRadius: "50%", background: "#F1F5F9", color: "#64748B", fontSize: "11px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   miniQueueName: { flex: 1, fontSize: "13px", fontWeight: "600", color: "#374151" },
   miniQueueToken: { fontSize: "11px", color: "#94A3B8", fontFamily: "monospace" },
-  tableCard: { background: "#fff", borderRadius: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)", overflow: "hidden" },
+  noticeBar: { display: "flex", alignItems: "center", gap: "10px", background: "#FFFBEB", border: "1px solid #FDE68A", color: "#B45309", borderRadius: "12px", padding: "12px 18px", fontSize: "13px", fontWeight: "600", marginBottom: "24px" },
+  tableCard: { background: "#fff", borderRadius: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)", overflow: "hidden", marginBottom: "24px" },
   tableHeader: { padding: "20px 24px", borderBottom: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center" },
   countBadge: { background: "#F1F5F9", color: "#64748B", fontSize: "12px", fontWeight: "700", padding: "4px 12px", borderRadius: "20px" },
   table: { width: "100%", borderCollapse: "collapse" },
