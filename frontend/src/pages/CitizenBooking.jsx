@@ -330,6 +330,12 @@ export default function CitizenBooking() {
   // ── Holiday state ──────────────────────────────────────────────────────────
   const [holidays, setHolidays] = useState([]);
 
+  // ── Booked slots state (Feature 1 & 2) ────────────────────────────────────
+  const [bookedSlots, setBookedSlots] = useState([]);
+
+  // ── Dynamic queue position (Feature 4) ────────────────────────────────────
+  const [queuePosition, setQueuePosition] = useState(null);
+
   const [appointmentId] = useState("SHA-" + Math.floor(1000 + Math.random() * 9000));
 
   const t = translations[language];
@@ -415,6 +421,26 @@ export default function CitizenBooking() {
 
   const officeStatus = getOfficeStatus(effectiveDateStr);
 
+  // ── Fetch booked slots whenever effective date changes (Feature 1 & 2) ────
+  useEffect(() => {
+    if (!effectiveDateStr) {
+      setBookedSlots([]);
+      return;
+    }
+    async function fetchBookedSlots() {
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("appointment_time")
+        .eq("appointment_date", effectiveDateStr);
+      if (!error && data) {
+        setBookedSlots(data.map((a) => a.appointment_time));
+      } else {
+        setBookedSlots([]);
+      }
+    }
+    fetchBookedSlots();
+  }, [effectiveDateStr]);
+
   // ── Existing logic (untouched) ─────────────────────────────────────────────
 
   const saveAppointment = async () => {
@@ -423,7 +449,8 @@ export default function CitizenBooking() {
         ? new Date().toISOString().split("T")[0]
         : selectedDate;
 
-    const { data, error } = await supabase
+    // Feature 3: insert location field
+    const { error } = await supabase
       .from("appointments")
       .insert({
         appointment_id: appointmentId,
@@ -433,6 +460,7 @@ export default function CitizenBooking() {
         appointment_date: bookingDate,
         appointment_time: selectedSlot,
         officer_name: OFFICER.name,
+        location: arrivingFrom,
         status: "Waiting",
       });
 
@@ -440,6 +468,24 @@ export default function CitizenBooking() {
       console.log(error);
       alert("Failed to book appointment");
       return;
+    }
+
+    // Feature 4: calculate dynamic queue position for this date
+    const { data: dayAppointments } = await supabase
+      .from("appointments")
+      .select("appointment_time")
+      .eq("appointment_date", bookingDate);
+
+    if (dayAppointments) {
+      // Sort all booked slots by time using the master TIME_SLOTS order
+      const orderedTimes = TIME_SLOTS
+        .filter((s) => !s.disabled)
+        .map((s) => s.time);
+      const sortedBooked = dayAppointments
+        .map((a) => a.appointment_time)
+        .sort((a, b) => orderedTimes.indexOf(a) - orderedTimes.indexOf(b));
+      const pos = sortedBooked.indexOf(selectedSlot) + 1;
+      setQueuePosition(pos > 0 ? pos : dayAppointments.length);
     }
 
     setStep(6);
@@ -458,13 +504,17 @@ export default function CitizenBooking() {
 
   const visibleSlots = TIME_SLOTS.filter((s) => {
     if (s.disabled) return true;
+    // 3. Past time filtering (existing)
     if (isToday) {
       return timeToMinutes(s.time) > currentMinutes;
     }
     return true;
   });
 
-  const hasAvailableSlots = visibleSlots.some((s) => !s.disabled);
+  // A slot is truly available only if it is visible AND not already booked
+  const hasAvailableSlots = visibleSlots.some(
+    (s) => !s.disabled && !bookedSlots.includes(s.time)
+  );
 
   function handlePurposeContinue() {
     if (!selectedPurpose.trim()) return;
@@ -490,15 +540,10 @@ export default function CitizenBooking() {
     setNotes("");
     setFeedbackText("");
     setFeedbackSubmitted(false);
+    setBookedSlots([]);
+    setQueuePosition(null);
   }
 
-  const halfRowStyle = {
-    flex: 1,
-    display: "flex",
-    alignItems: "flex-start",
-    gap: 12,
-    padding: "4px 0",
-  };
 
   return (
     <div style={{ minHeight: "100vh", background: "#F8FAFC" }}>
@@ -743,19 +788,37 @@ export default function CitizenBooking() {
                     );
                   }
                   const isSelected = selectedSlot === s.time;
+                  // Feature 1 & 2: check if slot is already booked
+                  const isBooked = bookedSlots.includes(s.time);
                   return (
                     <button
                       key={i}
-                      onClick={() => setSelectedSlot(s.time)}
+                      onClick={() => !isBooked && setSelectedSlot(s.time)}
+                      disabled={isBooked}
                       style={{
                         padding: "12px 4px",
                         borderRadius: 10,
-                        border: `2px solid ${isSelected ? "#2563EB" : "#E5E7EB"}`,
-                        background: isSelected ? "linear-gradient(135deg,#2563EB,#1E3A8A)" : "#F9FAFB",
-                        color: isSelected ? "#fff" : "#374151",
+                        border: `2px solid ${
+                          isBooked
+                            ? "#E5E7EB"
+                            : isSelected
+                            ? "#2563EB"
+                            : "#E5E7EB"
+                        }`,
+                        background: isBooked
+                          ? "#F3F4F6"
+                          : isSelected
+                          ? "linear-gradient(135deg,#2563EB,#1E3A8A)"
+                          : "#F9FAFB",
+                        color: isBooked
+                          ? "#9CA3AF"
+                          : isSelected
+                          ? "#fff"
+                          : "#374151",
                         fontWeight: isSelected ? 700 : 500,
                         fontSize: 13,
-                        cursor: "pointer",
+                        cursor: isBooked ? "not-allowed" : "pointer",
+                        opacity: isBooked ? 0.5 : 1,
                         transform: isSelected ? "scale(1.04)" : "scale(1)",
                         transition: "all 0.15s",
                         boxShadow: isSelected ? "0 4px 12px rgba(37,99,235,0.3)" : "none",
@@ -960,20 +1023,11 @@ export default function CitizenBooking() {
 
             <div style={conf.divider} />
 
-            <div style={{ display: "flex" }}>
-              <div style={halfRowStyle}>
-                <span style={conf.rowIcon}>🔢</span>
-                <div>
-                  <p style={conf.rowLabel}>{t.queue}</p>
-                  <p style={conf.rowValue}>{t.queuePosition}</p>
-                </div>
-              </div>
-              <div style={halfRowStyle}>
-                <span style={conf.rowIcon}>⏱</span>
-                <div>
-                  <p style={conf.rowLabel}>{t.wait}</p>
-                  <p style={conf.rowValue}>{t.waitTime}</p>
-                </div>
+            <div style={conf.row}>
+              <span style={conf.rowIcon}>🔢</span>
+              <div>
+                <p style={conf.rowLabel}>{t.queue}</p>
+                <p style={conf.rowValue}>#{queuePosition ?? "—"}</p>
               </div>
             </div>
 
