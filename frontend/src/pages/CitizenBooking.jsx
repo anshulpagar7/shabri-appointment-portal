@@ -6,6 +6,8 @@ import { translations } from "../translations";
 
 import { supabase } from "../lib/supabase";
 
+import tdcLogo from "../assets/tdc-logo.jpeg";
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const OFFICER = { name: "Leena Bansod", designation: "Managing Director" };
@@ -47,6 +49,13 @@ const TIME_SLOTS = [
 ];
 
 const TOTAL_STEPS = 5;
+
+// ─── Feature 4: Time filtering helper ─────────────────────────────────────────
+
+function timeToMinutes(time) {
+  const d = new Date(`1970-01-01 ${time}`);
+  return d.getHours() * 60 + d.getMinutes();
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -181,6 +190,64 @@ function OfficerBadge({ t }) {
   );
 }
 
+// ─── Feature 1: Dual Logo Row ──────────────────────────────────────────────────
+
+function DualLogoRow() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 20,
+        marginBottom: 18,
+      }}
+    >
+      {/* Existing emblem — kept as first logo */}
+      <div
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: "50%",
+          background: "rgba(255,255,255,0.15)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          border: "2px solid rgba(255,255,255,0.3)",
+          flexShrink: 0,
+        }}
+      >
+        <span style={{ fontSize: 28 }}>🏛️</span>
+      </div>
+
+      {/* Divider */}
+      <div
+        style={{
+          width: 1,
+          height: 40,
+          background: "rgba(255,255,255,0.25)",
+          flexShrink: 0,
+        }}
+      />
+
+      {/* TDC logo */}
+      <img
+        src={tdcLogo}
+        alt="TDC Logo"
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: "50%",
+          objectFit: "cover",
+          border: "2px solid rgba(255,255,255,0.3)",
+          background: "#fff",
+          flexShrink: 0,
+        }}
+      />
+    </div>
+  );
+}
+
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function CitizenBooking() {
@@ -193,7 +260,12 @@ export default function CitizenBooking() {
   const [selectedSlot, setSelectedSlot] = useState("");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
+  const [arrivingFrom, setArrivingFrom] = useState(""); // Feature 2
   const [notes, setNotes] = useState("");
+
+  // Feature 3: Feedback state
+  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
   const [appointmentId] = useState("SHA-" + Math.floor(1000 + Math.random() * 9000));
 
@@ -202,39 +274,25 @@ export default function CitizenBooking() {
   const saveAppointment = async () => {
     const bookingDate =
       appointmentType === "today"
-        ? new Date()
-            .toISOString()
-            .split("T")[0]
+        ? new Date().toISOString().split("T")[0]
         : selectedDate;
 
-    const { data, error } =
-      await supabase
-        .from("appointments")
-        .insert({
-          appointment_id:
-            appointmentId,
-          citizen_name:
-            name,
-          mobile:
-            mobile,
-          purpose:
-            selectedPurpose,
-          appointment_date:
-            bookingDate,
-          appointment_time:
-            selectedSlot,
-          officer_name:
-            OFFICER.name,
-          status:
-            "Waiting",
-            
-        });
+    const { data, error } = await supabase
+      .from("appointments")
+      .insert({
+        appointment_id: appointmentId,
+        citizen_name: name,
+        mobile: mobile,
+        purpose: selectedPurpose,
+        appointment_date: bookingDate,
+        appointment_time: selectedSlot,
+        officer_name: OFFICER.name,
+        status: "Waiting",
+      });
 
     if (error) {
       console.log(error);
-      alert(
-        "Failed to book appointment"
-      );
+      alert("Failed to book appointment");
       return;
     }
 
@@ -246,6 +304,24 @@ export default function CitizenBooking() {
   }, [step]);
 
   const todayStr = new Date().toISOString().split("T")[0];
+
+  // Feature 4: Compute visible slots based on selected date vs today
+  const isToday =
+    appointmentType === "today" ||
+    (appointmentType === "future" && selectedDate === todayStr);
+
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const visibleSlots = TIME_SLOTS.filter((s) => {
+    if (s.disabled) return true; // lunch row handled separately
+    if (isToday) {
+      return timeToMinutes(s.time) > currentMinutes;
+    }
+    return true;
+  });
+
+  const hasAvailableSlots = visibleSlots.some((s) => !s.disabled);
 
   function handlePurposeContinue() {
     if (!selectedPurpose.trim()) return;
@@ -267,8 +343,20 @@ export default function CitizenBooking() {
     setSelectedSlot("");
     setName("");
     setMobile("");
+    setArrivingFrom("");
     setNotes("");
+    setFeedbackText("");
+    setFeedbackSubmitted(false);
   }
+
+  // ─── Shared style for the half-row (fixes OXC spread parse error) ────────────
+  const halfRowStyle = {
+    flex: 1,
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 12,
+    padding: "4px 0",
+  };
 
   return (
     <div style={{ minHeight: "100vh", background: "#F8FAFC" }}>
@@ -280,9 +368,9 @@ export default function CitizenBooking() {
       {step === 0 && (
         <div style={landing.outer}>
           <div style={landing.hero}>
-            <div style={landing.emblem}>
-              <span style={{ fontSize: 32 }}>🏛️</span>
-            </div>
+            {/* Feature 1: Dual logos */}
+            <DualLogoRow />
+
             <p style={landing.gov}>{t.government}</p>
             <h1 style={landing.org}>{t.welcome}</h1>
             <p style={landing.taglineStyle}>{t.tagline}</p>
@@ -442,9 +530,32 @@ export default function CitizenBooking() {
         <Card>
           <StepHeading>{t.selectSlot}</StepHeading>
           <OfficerBadge t={t} />
+
+          {/* Feature 4: No slots warning */}
+          {!hasAvailableSlots && (
+            <div
+              style={{
+                background: "#FEF2F2",
+                border: "1.5px solid #FECACA",
+                borderRadius: 12,
+                padding: "16px 20px",
+                marginBottom: 16,
+                textAlign: "center",
+                color: "#DC2626",
+                fontWeight: 600,
+                fontSize: 14,
+              }}
+            >
+              ⚠️ No more slots available for today. Please book for a future date.
+            </div>
+          )}
+
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
-            {TIME_SLOTS.map((s, i) => {
+            {visibleSlots.map((s, i) => {
               if (s.disabled) {
+                const hasAfternoonSlots = visibleSlots.some((vs) => !vs.disabled && vs.group === "afternoon");
+                const hasMorningSlots = visibleSlots.some((vs) => !vs.disabled && vs.group === "morning");
+                if (!hasMorningSlots || !hasAfternoonSlots) return null;
                 return (
                   <div
                     key={i}
@@ -488,7 +599,8 @@ export default function CitizenBooking() {
               );
             })}
           </div>
-          <PrimaryButton onClick={() => setStep(5)} disabled={!selectedSlot}>
+
+          <PrimaryButton onClick={() => setStep(5)} disabled={!selectedSlot || !hasAvailableSlots}>
             {t.continue}
           </PrimaryButton>
         </Card>
@@ -499,35 +611,86 @@ export default function CitizenBooking() {
         <Card>
           <StepHeading>{t.details}</StepHeading>
           <OfficerBadge t={t} />
-          {[
-            { labelKey: "fullName", value: name, set: setName, placeholderKey: "fullNamePlaceholder", type: "text" },
-            { labelKey: "mobile", value: mobile, set: setMobile, placeholderKey: "mobilePlaceholder", type: "tel" },
-          ].map((field) => (
-            <div key={field.labelKey} style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
-                {t[field.labelKey]}
-              </label>
-              <input
-                type={field.type}
-                style={{
-                  width: "100%",
-                  padding: "13px 16px",
-                  borderRadius: 12,
-                  border: "1.5px solid #D1D5DB",
-                  fontSize: 15,
-                  color: "#111827",
-                  outline: "none",
-                  boxSizing: "border-box",
-                  fontFamily: "inherit",
-                }}
-                placeholder={t[field.placeholderKey]}
-                value={field.value}
-                onChange={(e) => field.set(e.target.value)}
-                onFocus={(e) => (e.target.style.borderColor = "#2563EB")}
-                onBlur={(e) => (e.target.style.borderColor = "#D1D5DB")}
-              />
-            </div>
-          ))}
+
+          {/* Name */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              {t.fullName}
+            </label>
+            <input
+              type="text"
+              style={{
+                width: "100%",
+                padding: "13px 16px",
+                borderRadius: 12,
+                border: "1.5px solid #D1D5DB",
+                fontSize: 15,
+                color: "#111827",
+                outline: "none",
+                boxSizing: "border-box",
+                fontFamily: "inherit",
+              }}
+              placeholder={t.fullNamePlaceholder}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onFocus={(e) => (e.target.style.borderColor = "#2563EB")}
+              onBlur={(e) => (e.target.style.borderColor = "#D1D5DB")}
+            />
+          </div>
+
+          {/* Mobile */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              {t.mobile}
+            </label>
+            <input
+              type="tel"
+              style={{
+                width: "100%",
+                padding: "13px 16px",
+                borderRadius: 12,
+                border: "1.5px solid #D1D5DB",
+                fontSize: 15,
+                color: "#111827",
+                outline: "none",
+                boxSizing: "border-box",
+                fontFamily: "inherit",
+              }}
+              placeholder={t.mobilePlaceholder}
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
+              onFocus={(e) => (e.target.style.borderColor = "#2563EB")}
+              onBlur={(e) => (e.target.style.borderColor = "#D1D5DB")}
+            />
+          </div>
+
+          {/* Feature 2: Arriving From */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
+              Arriving From
+            </label>
+            <input
+              type="text"
+              style={{
+                width: "100%",
+                padding: "13px 16px",
+                borderRadius: 12,
+                border: "1.5px solid #D1D5DB",
+                fontSize: 15,
+                color: "#111827",
+                outline: "none",
+                boxSizing: "border-box",
+                fontFamily: "inherit",
+              }}
+              placeholder="Enter your city, village or area"
+              value={arrivingFrom}
+              onChange={(e) => setArrivingFrom(e.target.value)}
+              onFocus={(e) => (e.target.style.borderColor = "#2563EB")}
+              onBlur={(e) => (e.target.style.borderColor = "#D1D5DB")}
+            />
+          </div>
+
+          {/* Notes */}
           <div style={{ marginBottom: 4 }}>
             <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
               {t.notes}{" "}
@@ -554,6 +717,7 @@ export default function CitizenBooking() {
               onBlur={(e) => (e.target.style.borderColor = "#D1D5DB")}
             />
           </div>
+
           <PrimaryButton
             onClick={saveAppointment}
             disabled={!name.trim() || !mobile.trim()}
@@ -627,15 +791,16 @@ export default function CitizenBooking() {
 
             <div style={conf.divider} />
 
+            {/* FIX: no object spread inside JSX — use pre-built halfRowStyle variable */}
             <div style={{ display: "flex" }}>
-              <div style={{ flex: 1, ...conf.row }}>
+              <div style={halfRowStyle}>
                 <span style={conf.rowIcon}>🔢</span>
                 <div>
                   <p style={conf.rowLabel}>{t.queue}</p>
                   <p style={conf.rowValue}>{t.queuePosition}</p>
                 </div>
               </div>
-              <div style={{ flex: 1, ...conf.row }}>
+              <div style={halfRowStyle}>
                 <span style={conf.rowIcon}>⏱</span>
                 <div>
                   <p style={conf.rowLabel}>{t.wait}</p>
@@ -663,6 +828,20 @@ export default function CitizenBooking() {
                 <p style={conf.rowValue}>{mobile}</p>
               </div>
             </div>
+
+            {/* Feature 2: Arriving From in confirmation */}
+            {arrivingFrom.trim() && (
+              <div>
+                <div style={conf.divider} />
+                <div style={conf.row}>
+                  <span style={conf.rowIcon}>📍</span>
+                  <div>
+                    <p style={conf.rowLabel}>Arriving From</p>
+                    <p style={conf.rowValue}>{arrivingFrom}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <a
@@ -673,6 +852,93 @@ export default function CitizenBooking() {
           >
             <span style={{ fontSize: 20 }}>💬</span> {t.whatsappBtn}
           </a>
+
+          {/* ── Feature 3: Feedback Section ── */}
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 20,
+              padding: "22px",
+              marginTop: 16,
+              boxShadow: "0 4px 24px rgba(37,99,235,0.07)",
+            }}
+          >
+            <p
+              style={{
+                margin: "0 0 14px",
+                fontWeight: 700,
+                fontSize: 13,
+                color: "#2563EB",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+              }}
+            >
+              💬 Citizen Feedback
+            </p>
+
+            {feedbackSubmitted ? (
+              <div
+                style={{
+                  background: "#ECFDF5",
+                  border: "1.5px solid #6EE7B7",
+                  borderRadius: 12,
+                  padding: "16px 20px",
+                  textAlign: "center",
+                  color: "#065F46",
+                  fontWeight: 700,
+                  fontSize: 15,
+                }}
+              >
+                ✅ Feedback Submitted. Thank you.
+              </div>
+            ) : (
+              <div>
+                <textarea
+                  style={{
+                    width: "100%",
+                    padding: "13px 16px",
+                    borderRadius: 12,
+                    border: "1.5px solid #D1D5DB",
+                    fontSize: 15,
+                    color: "#111827",
+                    resize: "vertical",
+                    minHeight: 90,
+                    fontFamily: "inherit",
+                    outline: "none",
+                    boxSizing: "border-box",
+                    lineHeight: 1.6,
+                  }}
+                  placeholder="Share your experience or suggestions"
+                  value={feedbackText}
+                  onChange={(e) => setFeedbackText(e.target.value)}
+                  onFocus={(e) => (e.target.style.borderColor = "#2563EB")}
+                  onBlur={(e) => (e.target.style.borderColor = "#D1D5DB")}
+                />
+                <button
+                  onClick={() => { if (feedbackText.trim()) setFeedbackSubmitted(true); }}
+                  disabled={!feedbackText.trim()}
+                  style={{
+                    width: "100%",
+                    padding: "14px",
+                    marginTop: 12,
+                    borderRadius: 12,
+                    border: "none",
+                    background: !feedbackText.trim()
+                      ? "#93C5FD"
+                      : "linear-gradient(135deg,#2563EB,#1E3A8A)",
+                    color: "#fff",
+                    fontSize: 15,
+                    fontWeight: 700,
+                    cursor: !feedbackText.trim() ? "not-allowed" : "pointer",
+                    boxShadow: !feedbackText.trim() ? "none" : "0 4px 14px rgba(37,99,235,0.35)",
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  Submit Feedback
+                </button>
+              </div>
+            )}
+          </div>
 
           <button
             style={{
