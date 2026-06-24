@@ -7,7 +7,7 @@ const EMPTY_FORM = {
   meeting_date: "",
   meeting_time: "",
   meeting_end_time: "",
-  meeting_links: "",
+  meet_link: "",
   notes: "",
   status: "Upcoming",
 };
@@ -142,7 +142,7 @@ export default function ExecutiveMeetings() {
       meeting_date: m.meeting_date || "",
       meeting_time: m.meeting_time || "",
       meeting_end_time: m.meeting_end_time || "",
-      meeting_links: m.meeting_links || "",
+      meet_link: m.meet_link || "",
       notes: m.notes || "",
       status: m.status || "Upcoming",
     });
@@ -223,7 +223,7 @@ export default function ExecutiveMeetings() {
       {/* Meeting Cards */}
       <div style={styles.meetingsGrid}>
         {filtered.map(m => {
-          const mode = getModeFromLink(m.meeting_links);
+          const mode = getModeFromLink(m.meet_link);
           const ms = modeStyle[mode] || { bg: "#F1F5F9", color: "#64748B", icon: "📅" };
           const ss = statusStyle[m.status] || { bg: "#F1F5F9", color: "#64748B" };
           const dateParts = (m.meeting_date || "").split("-");
@@ -261,16 +261,16 @@ export default function ExecutiveMeetings() {
 
               {m.notes && <p style={styles.notes}>{m.notes}</p>}
 
-              {m.meeting_links && (
+              {m.meet_link && (
                 <div style={styles.linkBox}>
                   <span style={styles.linkIcon}>🔗</span>
-                  <a href={m.meeting_links} target="_blank" rel="noreferrer" style={styles.linkText}>{m.meeting_links}</a>
+                  <a href={m.meet_link} target="_blank" rel="noreferrer" style={styles.linkText}>{m.meet_link}</a>
                 </div>
               )}
 
               <div style={styles.cardActions}>
-                {m.meeting_links && (
-                  <a href={m.meeting_links} target="_blank" rel="noreferrer" style={styles.joinBtn}>🎥 Join Meet</a>
+                {m.meet_link && (
+                  <a href={m.meet_link} target="_blank" rel="noreferrer" style={styles.joinBtn}>🎥 Join Meet</a>
                 )}
                 <button onClick={() => handleEdit(m)} style={styles.editBtn}>✏️ Edit</button>
                 {m.status !== "Completed" && (
@@ -318,7 +318,7 @@ export default function ExecutiveMeetings() {
                 </FormField>
               </div>
               <FormField label="Meeting Link">
-                <input name="meeting_links" value={form.meeting_links} onChange={handleChange} placeholder="https://meet.google.com/..." style={styles.input} />
+                <input name="meet_link" value={form.meet_link} onChange={handleChange} placeholder="https://meet.google.com/..." style={styles.input} />
               </FormField>
               <FormField label="Notes">
                 <textarea name="notes" value={form.notes} onChange={handleChange} placeholder="Meeting agenda or notes..." rows={3} style={{ ...styles.input, resize: "vertical" }} />
