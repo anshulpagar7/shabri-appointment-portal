@@ -1,17 +1,37 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 
+function todayStr() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return { text: "Good Morning", icon: "👋" };
+  if (hour >= 12 && hour < 17) return { text: "Good Afternoon", icon: "☀️" };
+  return { text: "Good Evening", icon: "🌙" };
+}
+
 export default function StaffDashboard() {
   const [appointments, setAppointments] = useState([]);
+  const [meetings, setMeetings] = useState([]);
 
   useEffect(() => {
     fetchAppointments();
+    fetchMeetings();
   }, []);
 
   const fetchAppointments = async () => {
+    const today = todayStr();
+
     const { data, error } = await supabase
       .from("appointments")
       .select("*")
+      .eq("appointment_date", today)
       .order("appointment_time", { ascending: true });
 
     if (error) {
@@ -21,6 +41,25 @@ export default function StaffDashboard() {
 
     setAppointments(data);
   };
+
+  const fetchMeetings = async () => {
+    const today = todayStr();
+
+    const { data, error } = await supabase
+      .from("executive_meetings")
+      .select("*")
+      .eq("meeting_date", today)
+      .order("meeting_time", { ascending: true });
+
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    setMeetings(data);
+  };
+
+  const greeting = getGreeting();
 
   const stats = [
     {
@@ -55,18 +94,20 @@ export default function StaffDashboard() {
       bg: "#FEF2F2",
       trend: "Live data",
     },
+    {
+      label: "Reschedule Required",
+      value: appointments.filter(a => a.status === "Reschedule Required").length,
+      icon: "🔁",
+      color: "#7C3AED",
+      bg: "#F5F3FF",
+      trend: "Live data",
+    },
   ];
 
-  const meetings = [
-    { title: "Head Office Review Meeting", date: "20 June 2026", time: "2:00 PM", mode: "Google Meet" },
-    { title: "Regional Officer Discussion", date: "21 June 2026", time: "4:00 PM", mode: "Physical" },
-  ];
-
-  const events = [
-    { title: "Scholarship Camp", date: "12 June 2026", icon: "🎓" },
-    { title: "Tribal Welfare Drive", date: "18 June 2026", icon: "🌿" },
-    { title: "Education Workshop", date: "22 June 2026", icon: "📚" },
-  ];
+  // Real queue derived from appointments table
+  const nowServing = appointments.find(a => a.status === "In Cabin");
+  const upNext = appointments.find(a => a.status === "Waiting");
+  const waitingCount = appointments.filter(a => a.status === "Waiting").length;
 
   const statusColor = {
     Approved: { bg: "#EFF6FF", color: "#2563EB" },
@@ -74,6 +115,8 @@ export default function StaffDashboard() {
     Completed: { bg: "#ECFDF5", color: "#059669" },
     Pending: { bg: "#F5F3FF", color: "#7C3AED" },
     "No Show": { bg: "#FEF2F2", color: "#DC2626" },
+    "In Cabin": { bg: "#DBEAFE", color: "#1D4ED8" },
+    "Reschedule Required": { bg: "#F5F3FF", color: "#7C3AED" },
   };
 
   return (
@@ -82,7 +125,7 @@ export default function StaffDashboard() {
       <div style={styles.pageHeader}>
         <div>
           <p style={styles.pageEyebrow}>STAFF OPERATIONS CENTER</p>
-          <h1 style={styles.pageTitle}>Good Morning 👋</h1>
+          <h1 style={styles.pageTitle}>{greeting.text} {greeting.icon}</h1>
           <p style={styles.pageSub}>
             {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} &nbsp;•&nbsp; Shabri Staff Portal
           </p>
@@ -127,13 +170,19 @@ export default function StaffDashboard() {
           <div style={styles.queueDisplay}>
             <div style={styles.tokenBig}>
               <p style={styles.tokenLabel}>NOW SERVING</p>
-              <div style={styles.tokenNumber}>#12</div>
-              <p style={styles.tokenName}>Rahul Sharma</p>
-              <p style={styles.tokenPurpose}>Scholarship Query</p>
+              <div style={styles.tokenNumber}>
+                {nowServing ? (nowServing.appointment_id || "—") : "—"}
+              </div>
+              <p style={styles.tokenName}>
+                {nowServing ? nowServing.citizen_name : "No one in cabin"}
+              </p>
+              <p style={styles.tokenPurpose}>
+                {nowServing ? nowServing.purpose : ""}
+              </p>
             </div>
             <div style={styles.queueStats}>
               <div style={styles.queueStat}>
-                <span style={styles.queueStatNum}>{appointments.filter(a => a.status === "Waiting").length}</span>
+                <span style={styles.queueStatNum}>{waitingCount}</span>
                 <span style={styles.queueStatLabel}>Waiting</span>
               </div>
               <div style={styles.queueStatDivider} />
@@ -143,14 +192,25 @@ export default function StaffDashboard() {
               </div>
               <div style={styles.queueStatDivider} />
               <div style={styles.queueStat}>
-                <span style={styles.queueStatNum}>3h</span>
+                <span style={styles.queueStatNum}>{Math.round((waitingCount * 10) / 60 * 10) / 10}h</span>
                 <span style={styles.queueStatLabel}>Est. Wait</span>
               </div>
             </div>
           </div>
           <div style={styles.nextCard}>
             <p style={styles.nextLabel}>UP NEXT</p>
-            <p style={styles.nextName}>Priya Patil &nbsp;<span style={{ color: "#94A3B8", fontWeight: "400" }}>• Token #13</span></p>
+            <p style={styles.nextName}>
+              {upNext ? (
+                <>
+                  {upNext.citizen_name} &nbsp;
+                  <span style={{ color: "#94A3B8", fontWeight: "400" }}>
+                    • {upNext.appointment_id}
+                  </span>
+                </>
+              ) : (
+                <span style={{ color: "#94A3B8", fontWeight: "400" }}>No one waiting</span>
+              )}
+            </p>
           </div>
         </div>
 
@@ -158,35 +218,30 @@ export default function StaffDashboard() {
         <div style={styles.card}>
           <p style={styles.cardEyebrow}>🤝 EXECUTIVE MEETINGS</p>
           <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
-            {meetings.map((m, i) => (
-              <div key={i} style={styles.meetingItem}>
-                <div style={styles.meetingDateBox}>
-                  <span style={styles.meetingDay}>{m.date.split(" ")[0]}</span>
-                  <span style={styles.meetingMonth}>{m.date.split(" ")[1].slice(0, 3)}</span>
+            {meetings.length === 0 && (
+              <p style={{ fontSize: "13px", color: "#94A3B8", margin: 0 }}>No meetings scheduled today.</p>
+            )}
+            {meetings.map((m) => {
+              const dateObj = m.meeting_date ? new Date(m.meeting_date) : null;
+              const day = dateObj ? dateObj.getDate() : "—";
+              const month = dateObj ? dateObj.toLocaleString("default", { month: "short" }) : "";
+              const mode = m.meet_link ? "Google Meet" : "Physical";
+              return (
+                <div key={m.id} style={styles.meetingItem}>
+                  <div style={styles.meetingDateBox}>
+                    <span style={styles.meetingDay}>{day}</span>
+                    <span style={styles.meetingMonth}>{month}</span>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={styles.meetingTitle}>{m.title}</p>
+                    <p style={styles.meetingMeta}>
+                      {m.meeting_time}{m.meeting_end_time ? ` – ${m.meeting_end_time}` : ""} &nbsp;•&nbsp; {mode}
+                    </p>
+                  </div>
+                  <span style={styles.meetingModeBadge}>{mode === "Google Meet" ? "🎥" : "🏢"}</span>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <p style={styles.meetingTitle}>{m.title}</p>
-                  <p style={styles.meetingMeta}>{m.time} &nbsp;•&nbsp; {m.mode}</p>
-                </div>
-                <span style={styles.meetingModeBadge}>{m.mode === "Google Meet" ? "🎥" : "🏢"}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Upcoming Events */}
-        <div style={styles.card}>
-          <p style={styles.cardEyebrow}>📣 UPCOMING EVENTS</p>
-          <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
-            {events.map((e, i) => (
-              <div key={i} style={styles.eventItem}>
-                <span style={styles.eventIcon}>{e.icon}</span>
-                <div>
-                  <p style={styles.eventTitle}>{e.title}</p>
-                  <p style={styles.eventDate}>{e.date}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -215,12 +270,12 @@ export default function StaffDashboard() {
                   <tr key={i} style={styles.tr}>
                     <td style={styles.td}>
                       <div style={styles.citizenCell}>
-                        <div style={styles.avatar}>{a.name?.[0]}</div>
-                        <span style={styles.citizenName}>{a.name}</span>
+                        <div style={styles.avatar}>{a.citizen_name?.[0]}</div>
+                        <span style={styles.citizenName}>{a.citizen_name}</span>
                       </div>
                     </td>
                     <td style={styles.td}><span style={styles.purposeTag}>{a.purpose}</span></td>
-                    <td style={styles.td}><span style={styles.officerText}>{a.officer}</span></td>
+                    <td style={styles.td}><span style={styles.officerText}>{a.officer_name}</span></td>
                     <td style={styles.td}><span style={styles.timeText}>{a.appointment_time}</span></td>
                     <td style={styles.td}>
                       <span style={{ ...styles.statusBadge, background: sc.bg, color: sc.color }}>
@@ -316,7 +371,7 @@ const styles = {
   statTrend: { margin: 0, fontSize: "12px", color: "#94A3B8" },
   midGrid: {
     display: "grid",
-    gridTemplateColumns: "2fr 1.2fr 1.2fr",
+    gridTemplateColumns: "2fr 1.2fr",
     gap: "20px",
   },
   queueCard: {
@@ -387,18 +442,6 @@ const styles = {
   meetingTitle: { margin: "0 0 3px", fontSize: "13px", fontWeight: "600", color: "#111827" },
   meetingMeta: { margin: 0, fontSize: "11px", color: "#64748B" },
   meetingModeBadge: { fontSize: "18px" },
-  eventItem: {
-    display: "flex",
-    gap: "12px",
-    alignItems: "center",
-    padding: "10px 12px",
-    background: "#F8FAFC",
-    borderRadius: "10px",
-    border: "1px solid #E2E8F0",
-  },
-  eventIcon: { fontSize: "20px" },
-  eventTitle: { margin: "0 0 3px", fontSize: "13px", fontWeight: "600", color: "#111827" },
-  eventDate: { margin: 0, fontSize: "11px", color: "#2563EB", fontWeight: "600" },
   tableHeader: { display: "flex", justifyContent: "space-between", alignItems: "center" },
   tableHeaderRight: {},
   tableCount: {
