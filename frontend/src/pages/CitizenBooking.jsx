@@ -1,18 +1,13 @@
 import { useState, useEffect } from "react";
-
 import Header from "../components/Header";
-
 import { translations } from "../translations";
-
 import { supabase } from "../lib/supabase";
-
 import tdcLogo from "../assets/tdc-logo.jpeg";
+import tribalLogo from "../assets/tribal-logo.jpg";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const OFFICER = { name: "Leena Bansod", designation: "Managing Director" };
-
-const ORG_NAME = "Maharashtra State Cooperative Tribal Development Corporation Limited";
 
 const TIME_SLOTS = [
   { time: "11:00 AM", group: "morning" },
@@ -190,7 +185,7 @@ function OfficerBadge({ t }) {
   );
 }
 
-// ─── Feature 1: Dual Logo Row ──────────────────────────────────────────────────
+// ─── Hero Dual Logo Row (tribal + tdc, both real images) ──────────────────────
 
 function DualLogoRow() {
   return (
@@ -203,29 +198,27 @@ function DualLogoRow() {
         marginBottom: 18,
       }}
     >
-      {/* Existing emblem — kept as first logo */}
-      <div
+      {/* Tribal logo */}
+      <img
+        src={tribalLogo}
+        alt="Tribal Logo"
         style={{
-          width: 64,
-          height: 64,
+          width: 68,
+          height: 68,
           borderRadius: "50%",
-          background: "rgba(255,255,255,0.15)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          border: "2px solid rgba(255,255,255,0.3)",
+          objectFit: "cover",
+          border: "2px solid rgba(255,255,255,0.4)",
+          background: "#fff",
           flexShrink: 0,
         }}
-      >
-        <span style={{ fontSize: 28 }}>🏛️</span>
-      </div>
+      />
 
       {/* Divider */}
       <div
         style={{
           width: 1,
-          height: 40,
-          background: "rgba(255,255,255,0.25)",
+          height: 44,
+          background: "rgba(255,255,255,0.3)",
           flexShrink: 0,
         }}
       />
@@ -235,11 +228,11 @@ function DualLogoRow() {
         src={tdcLogo}
         alt="TDC Logo"
         style={{
-          width: 64,
-          height: 64,
+          width: 68,
+          height: 68,
           borderRadius: "50%",
           objectFit: "cover",
-          border: "2px solid rgba(255,255,255,0.3)",
+          border: "2px solid rgba(255,255,255,0.4)",
           background: "#fff",
           flexShrink: 0,
         }}
@@ -260,10 +253,9 @@ export default function CitizenBooking() {
   const [selectedSlot, setSelectedSlot] = useState("");
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
-  const [arrivingFrom, setArrivingFrom] = useState(""); // Feature 2
+  const [arrivingFrom, setArrivingFrom] = useState("");
   const [notes, setNotes] = useState("");
 
-  // Feature 3: Feedback state
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
 
@@ -305,7 +297,6 @@ export default function CitizenBooking() {
 
   const todayStr = new Date().toISOString().split("T")[0];
 
-  // Feature 4: Compute visible slots based on selected date vs today
   const isToday =
     appointmentType === "today" ||
     (appointmentType === "future" && selectedDate === todayStr);
@@ -314,7 +305,7 @@ export default function CitizenBooking() {
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
   const visibleSlots = TIME_SLOTS.filter((s) => {
-    if (s.disabled) return true; // lunch row handled separately
+    if (s.disabled) return true;
     if (isToday) {
       return timeToMinutes(s.time) > currentMinutes;
     }
@@ -349,7 +340,6 @@ export default function CitizenBooking() {
     setFeedbackSubmitted(false);
   }
 
-  // ─── Shared style for the half-row (fixes OXC spread parse error) ────────────
   const halfRowStyle = {
     flex: 1,
     display: "flex",
@@ -368,7 +358,7 @@ export default function CitizenBooking() {
       {step === 0 && (
         <div style={landing.outer}>
           <div style={landing.hero}>
-            {/* Feature 1: Dual logos */}
+            {/* Both real logos in hero */}
             <DualLogoRow />
 
             <p style={landing.gov}>{t.government}</p>
@@ -531,7 +521,6 @@ export default function CitizenBooking() {
           <StepHeading>{t.selectSlot}</StepHeading>
           <OfficerBadge t={t} />
 
-          {/* Feature 4: No slots warning */}
           {!hasAvailableSlots && (
             <div
               style={{
@@ -664,7 +653,7 @@ export default function CitizenBooking() {
             />
           </div>
 
-          {/* Feature 2: Arriving From */}
+          {/* Arriving From */}
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
               Arriving From
@@ -718,10 +707,7 @@ export default function CitizenBooking() {
             />
           </div>
 
-          <PrimaryButton
-            onClick={saveAppointment}
-            disabled={!name.trim() || !mobile.trim()}
-          >
+          <PrimaryButton onClick={saveAppointment} disabled={!name.trim() || !mobile.trim()}>
             {t.confirm}
           </PrimaryButton>
         </Card>
@@ -791,7 +777,6 @@ export default function CitizenBooking() {
 
             <div style={conf.divider} />
 
-            {/* FIX: no object spread inside JSX — use pre-built halfRowStyle variable */}
             <div style={{ display: "flex" }}>
               <div style={halfRowStyle}>
                 <span style={conf.rowIcon}>🔢</span>
@@ -829,7 +814,6 @@ export default function CitizenBooking() {
               </div>
             </div>
 
-            {/* Feature 2: Arriving From in confirmation */}
             {arrivingFrom.trim() && (
               <div>
                 <div style={conf.divider} />
@@ -853,7 +837,7 @@ export default function CitizenBooking() {
             <span style={{ fontSize: 20 }}>💬</span> {t.whatsappBtn}
           </a>
 
-          {/* ── Feature 3: Feedback Section ── */}
+          {/* Feedback Section */}
           <div
             style={{
               background: "#fff",
@@ -923,9 +907,7 @@ export default function CitizenBooking() {
                     marginTop: 12,
                     borderRadius: 12,
                     border: "none",
-                    background: !feedbackText.trim()
-                      ? "#93C5FD"
-                      : "linear-gradient(135deg,#2563EB,#1E3A8A)",
+                    background: !feedbackText.trim() ? "#93C5FD" : "linear-gradient(135deg,#2563EB,#1E3A8A)",
                     color: "#fff",
                     fontSize: 15,
                     fontWeight: 700,
@@ -986,17 +968,6 @@ const landing = {
     maxWidth: 640,
     margin: "20px auto 0",
     boxShadow: "0 8px 32px rgba(37,99,235,0.35)",
-  },
-  emblem: {
-    width: 72,
-    height: 72,
-    borderRadius: "50%",
-    background: "rgba(255,255,255,0.15)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    margin: "0 auto 16px",
-    border: "2px solid rgba(255,255,255,0.3)",
   },
   gov: { margin: "0 0 6px", fontSize: 13, color: "rgba(255,255,255,0.8)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" },
   org: { margin: "0 0 12px", fontSize: 22, fontWeight: 800, color: "#fff", lineHeight: 1.3 },

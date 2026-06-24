@@ -6,7 +6,16 @@ const STATUS_CONFIG = {
   "In Cabin": { bg: "#DBEAFE", color: "#2563EB", dot: "#2563EB" },
   Completed: { bg: "#ECFDF5", color: "#059669", dot: "#10B981" },
   "No Show": { bg: "#FEF2F2", color: "#DC2626", dot: "#EF4444" },
+  "Reschedule Required": { bg: "#FEF3FF", color: "#9333EA", dot: "#A855F7" },
 };
+
+function toDateString(date) {
+  // Returns YYYY-MM-DD in local time
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 export default function Appointments() {
   const [appointments, setAppointments] = useState([]);
@@ -14,15 +23,17 @@ export default function Appointments() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterOfficer, setFilterOfficer] = useState("All");
+  const [selectedDate, setSelectedDate] = useState(toDateString(new Date()));
 
   useEffect(() => {
     fetchAppointments();
-  }, []);
+  }, [selectedDate]);
 
   const fetchAppointments = async () => {
     const { data, error } = await supabase
       .from("appointments")
       .select("*")
+      .eq("appointment_date", selectedDate)
       .order("appointment_time", { ascending: true });
 
     if (error) {
@@ -61,6 +72,23 @@ export default function Appointments() {
     fetchAppointments();
   };
 
+  const prevDay = () => {
+    const d = new Date(selectedDate + "T00:00:00");
+    d.setDate(d.getDate() - 1);
+    setSelectedDate(toDateString(d));
+  };
+
+  const nextDay = () => {
+    const d = new Date(selectedDate + "T00:00:00");
+    d.setDate(d.getDate() + 1);
+    setSelectedDate(toDateString(d));
+  };
+
+  const formatDisplayDate = (dateStr) => {
+    const d = new Date(dateStr + "T00:00:00");
+    return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  };
+
   const filtered = appointments.filter(a => {
     const matchSearch =
       (a.citizen_name || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -83,12 +111,25 @@ export default function Appointments() {
           <h1 style={styles.title}>Appointments</h1>
           <p style={styles.sub}>Manage citizen appointments and queue status.</p>
         </div>
-        <button style={styles.primaryBtn}>+ New Appointment</button>
+        {/* Date Navigator */}
+        <div style={styles.dateNav}>
+          <button onClick={prevDay} style={styles.dateNavBtn}>◀</button>
+          <div style={styles.dateNavCenter}>
+            <span style={styles.dateNavIcon}>📅</span>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={e => setSelectedDate(e.target.value)}
+              style={styles.dateInput}
+            />
+          </div>
+          <button onClick={nextDay} style={styles.dateNavBtn}>▶</button>
+        </div>
       </div>
 
       {/* Status Tabs */}
       <div style={styles.tabRow}>
-        {["All", "Waiting", "In Cabin", "Completed", "No Show"].map(s => (
+        {["All", "Waiting", "In Cabin", "Completed", "No Show", "Reschedule Required"].map(s => (
           <button
             key={s}
             onClick={() => setFilterStatus(s)}
@@ -132,7 +173,6 @@ export default function Appointments() {
         >
           <option value="All">All Officers</option>
           <option>Leena Bansod</option>
-          <option>Anshul Pagar</option>
         </select>
       </div>
 
@@ -219,6 +259,9 @@ export default function Appointments() {
                         {a.status === "No Show" && (
                           <span style={{ color: "#EF4444", fontSize: "16px" }} title="No Show">🔴</span>
                         )}
+                        {a.status === "Reschedule Required" && (
+                          <span style={{ color: "#9333EA", fontSize: "16px" }} title="Reschedule Required">🔄</span>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -238,16 +281,25 @@ const styles = {
   eyebrow: { margin: "0 0 6px", fontSize: "11px", fontWeight: "700", letterSpacing: "2px", color: "#2563EB" },
   title: { margin: "0 0 6px", fontSize: "28px", fontWeight: "800", color: "#111827" },
   sub: { margin: 0, fontSize: "14px", color: "#64748B" },
-  primaryBtn: { background: "linear-gradient(135deg,#2563EB,#1d4ed8)", color: "#fff", border: "none", padding: "12px 20px", borderRadius: "12px", fontWeight: "700", fontSize: "14px", cursor: "pointer" },
+  // Date Navigator
+  dateNav: { display: "flex", alignItems: "center", gap: "8px", background: "#fff", border: "1.5px solid #E2E8F0", borderRadius: "14px", padding: "8px 12px" },
+  dateNavBtn: { background: "#F1F5F9", border: "none", borderRadius: "8px", padding: "6px 10px", cursor: "pointer", fontSize: "13px", color: "#374151", fontWeight: "700" },
+  dateNavCenter: { display: "flex", alignItems: "center", gap: "8px" },
+  dateNavIcon: { fontSize: "16px" },
+  dateInput: { border: "none", outline: "none", fontSize: "14px", fontWeight: "700", color: "#111827", background: "transparent", cursor: "pointer" },
+  dateNavLabel: { fontSize: "14px", fontWeight: "700", color: "#111827", cursor: "pointer", userSelect: "none" },
+  // Tabs
   tabRow: { display: "flex", gap: "8px", marginBottom: "20px", flexWrap: "wrap" },
   tab: { display: "flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "20px", border: "1.5px solid", fontSize: "13px", fontWeight: "600", cursor: "pointer", transition: "all 0.15s" },
   tabCount: { fontSize: "11px", padding: "2px 8px", borderRadius: "20px", fontWeight: "700" },
+  // Filters
   filterRow: { display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" },
   searchWrap: { flex: 1, minWidth: "260px", display: "flex", alignItems: "center", background: "#fff", border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "0 14px" },
   searchIcon: { fontSize: "15px", marginRight: "8px", flexShrink: 0 },
   searchInput: { flex: 1, border: "none", outline: "none", fontSize: "14px", padding: "12px 0", background: "transparent", color: "#111827" },
   clearBtn: { background: "none", border: "none", cursor: "pointer", color: "#94A3B8", fontSize: "14px", padding: "4px" },
   select: { padding: "12px 16px", border: "1.5px solid #E2E8F0", borderRadius: "12px", fontSize: "14px", background: "#fff", color: "#374151", cursor: "pointer", outline: "none" },
+  // Table
   tableCard: { background: "#fff", borderRadius: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)", overflow: "hidden" },
   tableTop: { padding: "16px 24px", borderBottom: "1px solid #F1F5F9", display: "flex", justifyContent: "flex-end" },
   tableCount: { fontSize: "12px", color: "#94A3B8", fontWeight: "600" },
