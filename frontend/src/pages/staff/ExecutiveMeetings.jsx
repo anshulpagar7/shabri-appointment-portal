@@ -1,6 +1,16 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 
+function timeToMinutes(time) {
+  if (!time) return 0;
+  if (time.includes("AM") || time.includes("PM")) {
+    const d = new Date(`1970-01-01 ${time}`);
+    return d.getHours() * 60 + d.getMinutes();
+  }
+  const [hours, minutes] = time.split(":");
+  return Number(hours) * 60 + Number(minutes);
+}
+
 const EMPTY_FORM = {
   title: "",
   meeting_with: "",
@@ -71,10 +81,12 @@ export default function ExecutiveMeetings() {
       console.log(apptError);
     }
 
-    // Conflict: appointment_time falls between meeting_time and meeting_end_time (inclusive)
+    // Conflict: normalize both 12-hour (appointments) and 24-hour (meetings) times to minutes
     const conflicts = (appts || []).filter(a => {
-      const t = a.appointment_time;
-      return t >= form.meeting_time && t <= form.meeting_end_time;
+      const appointmentMinutes = timeToMinutes(a.appointment_time);
+      const meetingStart = timeToMinutes(form.meeting_time);
+      const meetingEnd = timeToMinutes(form.meeting_end_time);
+      return appointmentMinutes >= meetingStart && appointmentMinutes <= meetingEnd;
     });
 
     if (conflicts.length > 0) {
