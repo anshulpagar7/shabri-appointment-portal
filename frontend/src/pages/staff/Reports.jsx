@@ -1,47 +1,202 @@
+import { useState, useEffect } from "react";
+import { supabase } from "../../lib/supabase";
+
 export default function Reports() {
+  const [appointments, setAppointments] = useState([]);
+  const [meetings, setMeetings] = useState([]);
+
+  useEffect(() => {
+    fetchAppointments();
+    fetchMeetings();
+  }, []);
+
+  const fetchAppointments = async () => {
+    const { data, error } = await supabase
+      .from("appointments")
+      .select("*")
+      .order("appointment_time", { ascending: true });
+    if (error) { console.log(error); return; }
+    setAppointments(data ?? []);
+  };
+
+  const fetchMeetings = async () => {
+    const { data, error } = await supabase
+      .from("executive_meetings")
+      .select("*");
+    if (error) { console.log(error); return; }
+    setMeetings(data ?? []);
+  };
+
+  // ── KPI calculations ──────────────────────────────────────────────────────
+  const total        = appointments.length;
+  const waiting      = appointments.filter(a => a.status === "Waiting").length;
+  const completed    = appointments.filter(a => a.status === "Completed").length;
+  const noShow       = appointments.filter(a => a.status === "No Show").length;
+  const reschedule   = appointments.filter(a => a.status === "Reschedule Required").length;
+
   const kpis = [
-    { label: "Appointments Today", value: "48", icon: "📋", color: "#2563EB", bg: "#EFF6FF", change: "+12%", up: true },
-    { label: "Completed", value: "21", icon: "✅", color: "#10B981", bg: "#ECFDF5", change: "44%", up: true },
-    { label: "Waiting", value: "18", icon: "⏳", color: "#F59E0B", bg: "#FFFBEB", change: "37.5%", up: false },
-    { label: "No Shows", value: "3", icon: "❌", color: "#EF4444", bg: "#FEF2F2", change: "6.25%", up: false },
+    { label: "Appointments Today", value: total,      icon: "📋", color: "#2563EB", bg: "#EFF6FF", change: `${total} total`,       up: true  },
+    { label: "Completed",          value: completed,  icon: "✅", color: "#10B981", bg: "#ECFDF5", change: total ? `${Math.round((completed/total)*100)}%` : "0%",   up: true  },
+    { label: "Waiting",            value: waiting,    icon: "⏳", color: "#F59E0B", bg: "#FFFBEB", change: total ? `${Math.round((waiting/total)*100)}%` : "0%",     up: false },
+    { label: "No Shows",           value: noShow,     icon: "❌", color: "#EF4444", bg: "#FEF2F2", change: total ? `${Math.round((noShow/total)*100)}%` : "0%",      up: false },
+    { label: "Reschedule Required",value: reschedule, icon: "🔁", color: "#6366F1", bg: "#EEF2FF", change: total ? `${Math.round((reschedule/total)*100)}%` : "0%", up: false },
   ];
 
-  const monthlyData = [
-    { month: "Jan", value: 60, meetings: 4 },
-    { month: "Feb", value: 75, meetings: 6 },
-    { month: "Mar", value: 70, meetings: 5 },
-    { month: "Apr", value: 85, meetings: 7 },
-    { month: "May", value: 95, meetings: 8 },
-    { month: "Jun", value: 100, meetings: 5 },
-  ];
+  // ── Pie chart segments ────────────────────────────────────────────────────
+  const statusGroups = [
+    { label: "Completed",           color: "#10B981", count: completed  },
+    { label: "Waiting",             color: "#F59E0B", count: waiting    },
+    { label: "No Show",             color: "#EF4444", count: noShow     },
+    { label: "In Cabin",            color: "#2563EB", count: appointments.filter(a => a.status === "In Cabin").length },
+    { label: "Reschedule Required", color: "#6366F1", count: reschedule },
+  ].filter(s => s.count > 0);
 
-  const purposes = [
-    { label: "Scholarship", value: 85, color: "#2563EB" },
-    { label: "Education", value: 72, color: "#10B981" },
-    { label: "Employment", value: 55, color: "#6366F1" },
-    { label: "Certificate", value: 40, color: "#F59E0B" },
-    { label: "Complaint", value: 22, color: "#EF4444" },
-  ];
-
-  const officers = [
-    { name: "Leena Bansod", total: 30, completed: 14, color: "#2563EB" },
-  ];
-
-  const maxMonthly = Math.max(...monthlyData.map(d => d.value));
-
-  const pieSegments = [
-    { label: "Completed", pct: 44, color: "#10B981" },
-    { label: "Waiting", pct: 37, color: "#F59E0B" },
-    { label: "No Show", pct: 6, color: "#EF4444" },
-    { label: "Approved", pct: 13, color: "#2563EB" },
-  ];
+  const pieSegments = statusGroups.map(s => ({
+    ...s,
+    pct: total ? Math.round((s.count / total) * 100) : 0,
+  }));
 
   let cumulativePct = 0;
-  const conicStops = pieSegments.map(seg => {
-    const start = cumulativePct;
-    cumulativePct += seg.pct;
-    return `${seg.color} ${start}% ${cumulativePct}%`;
-  }).join(", ");
+  const conicStops = pieSegments.length
+    ? pieSegments.map(seg => {
+        const start = cumulativePct;
+        cumulativePct += seg.pct;
+        return `${seg.color} ${start}% ${cumulativePct}%`;
+      }).join(", ")
+    : "#E2E8F0 0% 100%";
+
+  // ── Monthly appointments ──────────────────────────────────────────────────
+  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const monthlyCounts = {};
+  appointments.forEach(a => {
+    const d = new Date(a.appointment_time ?? a.created_at);
+    if (!isNaN(d)) {
+      const key = monthNames[d.getMonth()];
+      monthlyCounts[key] = (monthlyCounts[key] ?? 0) + 1;
+    }
+  });
+  const monthlyData = monthNames
+    .filter(m => monthlyCounts[m])
+    .map(m => ({ month: m, value: monthlyCounts[m] }));
+  const maxMonthly = Math.max(...(monthlyData.map(d => d.value)), 1);
+
+  // ── Purpose distribution ──────────────────────────────────────────────────
+  const purposeCounts = {};
+  appointments.forEach(a => {
+    if (a.purpose) purposeCounts[a.purpose] = (purposeCounts[a.purpose] ?? 0) + 1;
+  });
+  const purposeColors = ["#2563EB","#10B981","#6366F1","#F59E0B","#EF4444","#8B5CF6","#EC4899"];
+  const purposes = Object.entries(purposeCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, count], i) => ({
+      label,
+      value: total ? Math.round((count / total) * 100) : 0,
+      color: purposeColors[i % purposeColors.length],
+    }));
+
+  // ── Officer performance (Leena Bansod only) ───────────────────────────────
+  const leenaTotal     = appointments.filter(a => a.officer === "Leena Bansod").length;
+  const leenaCompleted = appointments.filter(a => a.officer === "Leena Bansod" && a.status === "Completed").length;
+  const officers = leenaTotal > 0
+    ? [{ name: "Leena Bansod", total: leenaTotal, completed: leenaCompleted, color: "#2563EB" }]
+    : [];
+
+  // ── Executive meetings stats ──────────────────────────────────────────────
+  const mScheduled  = meetings.length;
+  const mCompleted  = meetings.filter(m => m.status === "Completed").length;
+  const mCancelled  = meetings.filter(m => m.status === "Cancelled").length;
+  const mOngoing    = meetings.filter(m => m.status === "Ongoing").length;
+  const mRate       = mScheduled ? Math.round((mCompleted / mScheduled) * 100) : 0;
+
+  // ── Export / Print ────────────────────────────────────────────────────────
+  const handleExport = () => {
+    const now = new Date().toLocaleString("en-IN", { dateStyle: "long", timeStyle: "short" });
+    const purposeRows = purposes.map(p =>
+      `<tr><td>${p.label}</td><td>${p.value}%</td></tr>`
+    ).join("");
+    const meetingRows = meetings.map(m =>
+      `<tr><td>${m.title ?? "—"}</td><td>${m.meeting_with ?? "—"}</td><td>${m.meeting_time ?? "—"}</td><td>${m.status ?? "—"}</td></tr>`
+    ).join("");
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>SHABRI Report – ${now}</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #111; }
+    .header { display: flex; align-items: center; gap: 20px; border-bottom: 3px solid #2563EB; padding-bottom: 20px; margin-bottom: 28px; }
+    .header-text h1 { margin: 0; font-size: 20px; color: #1E3A8A; }
+    .header-text p  { margin: 4px 0 0; font-size: 13px; color: #64748B; }
+    .badge { background: #EFF6FF; color: #2563EB; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; margin-bottom: 8px; display: inline-block; }
+    h2 { font-size: 15px; color: #1E3A8A; margin: 24px 0 10px; border-bottom: 1px solid #E2E8F0; padding-bottom: 6px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    th { background: #EFF6FF; color: #2563EB; font-size: 12px; text-align: left; padding: 8px 12px; }
+    td { font-size: 13px; padding: 8px 12px; border-bottom: 1px solid #F1F5F9; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; margin-bottom: 8px; }
+    .kpi-box { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px; text-align: center; }
+    .kpi-box .num { font-size: 28px; font-weight: 900; color: #2563EB; }
+    .kpi-box .lbl { font-size: 11px; color: #64748B; margin-top: 4px; }
+    .footer { margin-top: 40px; font-size: 11px; color: #94A3B8; text-align: center; border-top: 1px solid #E2E8F0; padding-top: 16px; }
+    @media print { body { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-text">
+      <div class="badge">GOVERNMENT OF MAHARASHTRA</div>
+      <h1>Maharashtra State Cooperative Tribal Development Corporation Limited</h1>
+      <p>SHABRI Smart Appointment Portal &nbsp;•&nbsp; Analytics Report</p>
+    </div>
+  </div>
+
+  <p style="font-size:13px;color:#64748B;margin:0 0 20px;">Generated on: <strong>${now}</strong></p>
+
+  <h2>Appointments Summary</h2>
+  <div class="kpi-grid">
+    <div class="kpi-box"><div class="num">${total}</div><div class="lbl">Total Today</div></div>
+    <div class="kpi-box"><div class="num">${completed}</div><div class="lbl">Completed</div></div>
+    <div class="kpi-box"><div class="num">${waiting}</div><div class="lbl">Waiting</div></div>
+    <div class="kpi-box"><div class="num">${noShow}</div><div class="lbl">No Shows</div></div>
+    <div class="kpi-box"><div class="num">${reschedule}</div><div class="lbl">Reschedule</div></div>
+  </div>
+
+  <h2>Completion Statistics</h2>
+  <table>
+    <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Completion Rate</td><td>${total ? Math.round((completed/total)*100) : 0}%</td></tr>
+      <tr><td>No-Show Rate</td><td>${total ? Math.round((noShow/total)*100) : 0}%</td></tr>
+      <tr><td>Pending Rate</td><td>${total ? Math.round((waiting/total)*100) : 0}%</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Purpose Distribution</h2>
+  <table>
+    <thead><tr><th>Purpose</th><th>Share</th></tr></thead>
+    <tbody>${purposeRows || "<tr><td colspan='2'>No data</td></tr>"}</tbody>
+  </table>
+
+  <h2>Executive Meetings</h2>
+  <table>
+    <thead><tr><th>Title</th><th>With</th><th>Time</th><th>Status</th></tr></thead>
+    <tbody>${meetingRows || "<tr><td colspan='4'>No meetings found</td></tr>"}</tbody>
+  </table>
+  <p style="font-size:13px;color:#64748B;">Meeting Completion Rate: <strong>${mRate}%</strong> &nbsp;(${mCompleted} of ${mScheduled} completed)</p>
+
+  <div class="footer">
+    This is a system-generated report from SHABRI Smart Appointment Portal.&nbsp;
+    © 2026 Maharashtra State Cooperative Tribal Development Corporation Limited
+  </div>
+</body>
+</html>`;
+
+    const win = window.open("", "_blank");
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => win.print();
+  };
 
   return (
     <div style={styles.page}>
@@ -59,7 +214,7 @@ export default function Reports() {
             <option>This Month</option>
             <option>Custom Range</option>
           </select>
-          <button onClick={() => alert("Report exported successfully!")} style={styles.exportBtn}>
+          <button onClick={handleExport} style={styles.exportBtn}>
             ⬇ Export Report
           </button>
         </div>
@@ -85,7 +240,7 @@ export default function Reports() {
               <span style={{ fontSize: "11px", color: "#94A3B8" }}>of today's total</span>
             </div>
             <div style={{ height: "3px", background: k.bg, borderRadius: "3px", marginTop: "12px", overflow: "hidden" }}>
-              <div style={{ height: "100%", background: k.color, width: `${(parseInt(k.value) / 48) * 100}%`, borderRadius: "3px" }} />
+              <div style={{ height: "100%", background: k.color, width: `${total ? (k.value / total) * 100 : 0}%`, borderRadius: "3px" }} />
             </div>
           </div>
         ))}
@@ -102,65 +257,79 @@ export default function Reports() {
           <div style={styles.pieWrap}>
             <div style={{ ...styles.pie, background: `conic-gradient(${conicStops})` }}>
               <div style={styles.pieHole}>
-                <p style={styles.pieHoleNum}>48</p>
+                <p style={styles.pieHoleNum}>{total}</p>
                 <p style={styles.pieHoleLabel}>Total</p>
               </div>
             </div>
           </div>
-          <div style={styles.legendGrid}>
-            {pieSegments.map(s => (
-              <div key={s.label} style={styles.legendItem}>
-                <div style={{ ...styles.legendDot, background: s.color }} />
-                <div>
-                  <p style={styles.legendLabel}>{s.label}</p>
-                  <p style={styles.legendPct}>{s.pct}%</p>
+          {pieSegments.length > 0 ? (
+            <div style={styles.legendGrid}>
+              {pieSegments.map(s => (
+                <div key={s.label} style={styles.legendItem}>
+                  <div style={{ ...styles.legendDot, background: s.color }} />
+                  <div>
+                    <p style={styles.legendLabel}>{s.label}</p>
+                    <p style={styles.legendPct}>{s.pct}%</p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p style={{ textAlign: "center", color: "#94A3B8", fontSize: "13px" }}>No appointment data yet</p>
+          )}
         </div>
 
         {/* Bar Chart */}
         <div style={{ ...styles.chartCard, flex: 2 }}>
           <div style={styles.chartHeader}>
             <h3 style={styles.chartTitle}>Monthly Appointments</h3>
-            <span style={styles.chartBadge}>2026</span>
+            <span style={styles.chartBadge}>{new Date().getFullYear()}</span>
           </div>
-          <div style={styles.barChart}>
-            {monthlyData.map(d => (
-              <div key={d.month} style={styles.barGroup}>
-                <div style={styles.barLabels}>
-                  <span style={styles.barValue}>{d.value}</span>
+          {monthlyData.length > 0 ? (
+            <div style={styles.barChart}>
+              {monthlyData.map(d => (
+                <div key={d.month} style={styles.barGroup}>
+                  <div style={styles.barLabels}>
+                    <span style={styles.barValue}>{d.value}</span>
+                  </div>
+                  <div style={styles.barTrack}>
+                    <div style={{ ...styles.barFill, height: `${(d.value / maxMonthly) * 100}%` }} />
+                  </div>
+                  <span style={styles.barMonth}>{d.month}</span>
                 </div>
-                <div style={styles.barTrack}>
-                  <div style={{ ...styles.barFill, height: `${(d.value / maxMonthly) * 100}%` }} />
-                </div>
-                <span style={styles.barMonth}>{d.month}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ height: "180px", display: "flex", alignItems: "center", justifyContent: "center", color: "#94A3B8", fontSize: "13px" }}>
+              No monthly data available
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Purpose Analytics */}
+      {/* Purpose Distribution */}
       <div style={styles.chartCard}>
         <div style={styles.chartHeader}>
           <h3 style={styles.chartTitle}>Purpose Distribution</h3>
           <span style={styles.chartBadge}>All Time</span>
         </div>
-        <div style={styles.purposeGrid}>
-          {purposes.map(p => (
-            <div key={p.label} style={styles.purposeRow}>
-              <div style={styles.purposeLabel}>
-                <span style={{ fontWeight: "600", color: "#374151", fontSize: "14px" }}>{p.label}</span>
-                <span style={{ fontWeight: "700", color: p.color, fontSize: "14px" }}>{p.value}%</span>
+        {purposes.length > 0 ? (
+          <div style={styles.purposeGrid}>
+            {purposes.map(p => (
+              <div key={p.label} style={styles.purposeRow}>
+                <div style={styles.purposeLabel}>
+                  <span style={{ fontWeight: "600", color: "#374151", fontSize: "14px" }}>{p.label}</span>
+                  <span style={{ fontWeight: "700", color: p.color, fontSize: "14px" }}>{p.value}%</span>
+                </div>
+                <div style={styles.progressTrack}>
+                  <div style={{ ...styles.progressFill, width: `${p.value}%`, background: p.color }} />
+                </div>
               </div>
-              <div style={styles.progressTrack}>
-                <div style={{ ...styles.progressFill, width: `${p.value}%`, background: p.color }} />
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p style={{ textAlign: "center", color: "#94A3B8", fontSize: "13px", padding: "20px 0" }}>No purpose data available</p>
+        )}
       </div>
 
       {/* Officer Performance + Executive Meetings */}
@@ -170,7 +339,7 @@ export default function Reports() {
             <h3 style={styles.chartTitle}>Officer Performance</h3>
             <span style={styles.chartBadge}>Today</span>
           </div>
-          {officers.map(o => (
+          {officers.length > 0 ? officers.map(o => (
             <div key={o.name} style={styles.officerRow}>
               <div style={{ ...styles.officerAvatar, background: o.color }}>
                 {o.name.split(" ").map(n => n[0]).join("")}
@@ -181,33 +350,37 @@ export default function Reports() {
                   <span style={{ fontSize: "12px", color: "#64748B" }}>{o.completed}/{o.total} completed</span>
                 </div>
                 <div style={styles.progressTrack}>
-                  <div style={{ ...styles.progressFill, width: `${(o.completed / o.total) * 100}%`, background: o.color }} />
+                  <div style={{ ...styles.progressFill, width: `${o.total ? (o.completed / o.total) * 100 : 0}%`, background: o.color }} />
                 </div>
-                <span style={{ fontSize: "11px", color: "#94A3B8" }}>{Math.round((o.completed / o.total) * 100)}% completion rate</span>
+                <span style={{ fontSize: "11px", color: "#94A3B8" }}>
+                  {o.total ? Math.round((o.completed / o.total) * 100) : 0}% completion rate
+                </span>
               </div>
             </div>
-          ))}
+          )) : (
+            <p style={{ textAlign: "center", color: "#94A3B8", fontSize: "13px", padding: "20px 0" }}>No officer data available</p>
+          )}
         </div>
 
         {/* Executive Meetings Stats */}
         <div style={styles.chartCard}>
           <div style={styles.chartHeader}>
             <h3 style={styles.chartTitle}>Executive Meetings</h3>
-            <span style={styles.chartBadge}>June 2026</span>
+            <span style={styles.chartBadge}>{new Date().toLocaleString("en-IN", { month: "long", year: "numeric" })}</span>
           </div>
           <div style={styles.meetingStats}>
-            <MeetingStat icon="📅" label="Scheduled" value="5" color="#2563EB" />
-            <MeetingStat icon="✅" label="Completed" value="3" color="#10B981" />
-            <MeetingStat icon="🎥" label="Google Meet" value="4" color="#6366F1" />
-            <MeetingStat icon="🏢" label="Physical" value="1" color="#F59E0B" />
+            <MeetingStat icon="📅" label="Scheduled" value={mScheduled} color="#2563EB" />
+            <MeetingStat icon="✅" label="Completed"  value={mCompleted} color="#10B981" />
+            <MeetingStat icon="❌" label="Cancelled"  value={mCancelled} color="#EF4444" />
+            <MeetingStat icon="🔴" label="Ongoing"    value={mOngoing}   color="#F59E0B" />
           </div>
           <div style={styles.meetingRateWrap}>
             <p style={{ margin: "0 0 8px", fontSize: "13px", color: "#64748B" }}>Meeting Completion Rate</p>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <div style={{ flex: 1, ...styles.progressTrack }}>
-                <div style={{ ...styles.progressFill, width: "60%", background: "#2563EB" }} />
+                <div style={{ ...styles.progressFill, width: `${mRate}%`, background: "#2563EB" }} />
               </div>
-              <span style={{ fontWeight: "800", fontSize: "18px", color: "#2563EB" }}>60%</span>
+              <span style={{ fontWeight: "800", fontSize: "18px", color: "#2563EB" }}>{mRate}%</span>
             </div>
           </div>
         </div>
@@ -237,7 +410,7 @@ const styles = {
   headerActions: { display: "flex", gap: "12px", alignItems: "center" },
   periodSelect: { padding: "10px 16px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "13px", background: "#fff", color: "#374151", cursor: "pointer", outline: "none" },
   exportBtn: { background: "linear-gradient(135deg,#2563EB,#1d4ed8)", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "10px", fontWeight: "700", fontSize: "14px", cursor: "pointer" },
-  kpiGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "24px" },
+  kpiGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", marginBottom: "24px" },
   kpiCard: { background: "#fff", borderRadius: "16px", padding: "22px", boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)" },
   kpiTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" },
   kpiLabel: { margin: "0 0 6px", fontSize: "12px", color: "#64748B", fontWeight: "500" },
