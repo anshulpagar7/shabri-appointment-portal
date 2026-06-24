@@ -71,7 +71,7 @@ export default function Header({ language, setLanguage }) {
         {/* Title */}
         <div>
           <h2 style={{ margin: 0, fontSize: "22px", fontWeight: "700" }}>
-            SHABRI
+            SHABARI
           </h2>
           <div style={{ fontSize: "13px", opacity: 0.9 }}>
             Smart Appointment Portal
