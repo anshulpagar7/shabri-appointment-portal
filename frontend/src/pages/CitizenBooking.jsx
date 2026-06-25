@@ -309,6 +309,200 @@ function DualLogoRow() {
   );
 }
 
+// ─── NEW: Latest Announcements Section ────────────────────────────────────────
+
+function AnnouncementsSection({ announcements }) {
+  if (!announcements || announcements.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: 20,
+        padding: "22px",
+        marginTop: 16,
+        boxShadow: "0 4px 24px rgba(37,99,235,0.07)",
+      }}
+    >
+      <p
+        style={{
+          margin: "0 0 14px",
+          fontWeight: 700,
+          fontSize: 13,
+          color: "#2563EB",
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+        }}
+      >
+        📢 Latest Announcements
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {announcements.map((item, idx) => (
+          <div
+            key={item.id ?? idx}
+            style={{
+              background: "#F8FAFF",
+              border: "1px solid #DBEAFE",
+              borderRadius: 12,
+              padding: "14px 16px",
+              borderLeft: "4px solid #2563EB",
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                fontSize: 14,
+                color: "#1E293B",
+                lineHeight: 1.6,
+                fontWeight: 500,
+              }}
+            >
+              {item.message}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── NEW: Upcoming Events Section ─────────────────────────────────────────────
+
+function EventsSection({ events }) {
+  if (!events || events.length === 0) return null;
+
+  // Category colour mapping for visual variety
+  const categoryColors = {
+    Camp: { bg: "#F0FDF4", border: "#BBF7D0", text: "#15803D" },
+    Scholarship: { bg: "#FFF7ED", border: "#FED7AA", text: "#C2410C" },
+    Awareness: { bg: "#EFF6FF", border: "#BFDBFE", text: "#1D4ED8" },
+    default: { bg: "#F5F3FF", border: "#DDD6FE", text: "#6D28D9" },
+  };
+
+  return (
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: 20,
+        padding: "22px",
+        marginTop: 16,
+        boxShadow: "0 4px 24px rgba(37,99,235,0.07)",
+      }}
+    >
+      <p
+        style={{
+          margin: "0 0 14px",
+          fontWeight: 700,
+          fontSize: 13,
+          color: "#2563EB",
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+        }}
+      >
+        🗓 Upcoming Events
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {events.map((event, idx) => {
+          const colors = categoryColors[event.category] ?? categoryColors.default;
+          const formattedDate = event.date
+            ? new Date(event.date).toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+              })
+            : "";
+
+          return (
+            <div
+              key={event.id ?? idx}
+              style={{
+                background: colors.bg,
+                border: `1px solid ${colors.border}`,
+                borderRadius: 12,
+                padding: "14px 16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 6,
+              }}
+            >
+              {/* Title + Category badge */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: 10,
+                }}
+              >
+                <p
+                  style={{
+                    margin: 0,
+                    fontWeight: 700,
+                    fontSize: 14,
+                    color: "#111827",
+                    lineHeight: 1.4,
+                    flex: 1,
+                  }}
+                >
+                  {event.title}
+                </p>
+                {event.category && (
+                  <span
+                    style={{
+                      background: colors.border,
+                      color: colors.text,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: "3px 9px",
+                      borderRadius: 99,
+                      whiteSpace: "nowrap",
+                      letterSpacing: "0.04em",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {event.category}
+                  </span>
+                )}
+              </div>
+
+              {/* Date */}
+              {formattedDate && (
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 12,
+                    color: "#6B7280",
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
+                  }}
+                >
+                  <span>📅</span> {formattedDate}
+                </p>
+              )}
+
+              {/* Short description */}
+              {event.short_description && (
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 13,
+                    color: "#374151",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {event.short_description}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function CitizenBooking() {
@@ -336,6 +530,10 @@ export default function CitizenBooking() {
   // ── Dynamic queue position (Feature 4) ────────────────────────────────────
   const [queuePosition, setQueuePosition] = useState(null);
 
+  // ── NEW: Post-booking info state ───────────────────────────────────────────
+  const [announcements, setAnnouncements] = useState([]);
+  const [upcomingEvents, setUpcomingEvents] = useState([]);
+
   const [appointmentId] = useState("SHA-" + Math.floor(1000 + Math.random() * 9000));
 
   const t = translations[language];
@@ -352,6 +550,39 @@ export default function CitizenBooking() {
     }
     fetchHolidays();
   }, []);
+
+  // ── NEW: Fetch announcements & events when confirmation screen shows ───────
+  useEffect(() => {
+    if (step !== 6) return;
+
+    async function fetchPostBookingInfo() {
+      // Latest 3 announcements
+      const { data: announcementData, error: announcementError } = await supabase
+        .from("announcements")
+        .select("id, message, created_at")
+        .order("created_at", { ascending: false })
+        .limit(3);
+
+      if (!announcementError && announcementData) {
+        setAnnouncements(announcementData);
+      }
+
+      // Upcoming 3 events visible to citizens
+      const { data: eventData, error: eventError } = await supabase
+        .from("events")
+        .select("id, title, date, category, short_description")
+        .eq("show_on_citizen", true)
+        .eq("status", "Upcoming")
+        .order("date", { ascending: true })
+        .limit(3);
+
+      if (!eventError && eventData) {
+        setUpcomingEvents(eventData);
+      }
+    }
+
+    fetchPostBookingInfo();
+  }, [step]);
 
   // ── Holiday / Weekend helpers ──────────────────────────────────────────────
 
@@ -549,6 +780,8 @@ export default function CitizenBooking() {
     setFeedbackSubmitted(false);
     setBookedSlots([]);
     setQueuePosition(null);
+    setAnnouncements([]);
+    setUpcomingEvents([]);
   }
 
 
@@ -1165,6 +1398,12 @@ export default function CitizenBooking() {
               </div>
             )}
           </div>
+
+          {/* ── NEW SECTION 1: Latest Announcements ── */}
+          <AnnouncementsSection announcements={announcements} />
+
+          {/* ── NEW SECTION 2: Upcoming Events ── */}
+          <EventsSection events={upcomingEvents} />
 
           <button
             style={{
