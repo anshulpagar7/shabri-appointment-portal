@@ -1,11 +1,11 @@
 import { useState } from "react";
-// Import all page components (adjust paths to your project structure)
 import Sidebar from "../../components/Sidebar";
 import StaffDashboard from "./StaffDashboard";
 import Appointments from "./Appointments";
 import QueueManagement from "./QueueManagement";
 import ScheduleAppointment from "./ScheduleAppointment";
 import ExecutiveMeetings from "./ExecutiveMeetings";
+import TourDiary from "./TourDiary";
 import HolidayManagement from "./HolidayManagement";
 import Events from "./Events";
 import Reports from "./Reports";
@@ -22,6 +22,7 @@ export default function StaffLayout() {
       case "Queue":              return <QueueManagement />;
       case "Schedule":           return <ScheduleAppointment />;
       case "Executive Meetings": return <ExecutiveMeetings />;
+      case "TourDiary":          return <TourDiary />;
       case "Holidays":           return <HolidayManagement />;
       case "Events":             return <Events />;
       case "Reports":            return <Reports />;
