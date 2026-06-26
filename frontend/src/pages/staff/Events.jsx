@@ -1,11 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-// ─── Supabase client ────────────────────────────────────────────────────────
-// Replace these with your actual project URL and anon key.
-const SUPABASE_URL = "https://your-project.supabase.co";
-const SUPABASE_ANON_KEY = "your-anon-key";
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+import { supabase } from "../../lib/supabase";
+import { useRealtime } from "../../hooks/useRealtime";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const CATEGORIES = ["Education", "Welfare", "Administration", "Health", "Sports", "Cultural", "Other"];
@@ -110,6 +105,9 @@ export default function Events() {
     fetchEvents();
     fetchAnnouncement();
   }, [fetchEvents, fetchAnnouncement]);
+
+  // ── Realtime subscriptions ────────────────────────────────────────────────
+  useRealtime({ events: fetchEvents, announcements: fetchAnnouncement });
 
   // ── Form handlers ─────────────────────────────────────────────────────────
   const handleChange = (e) => {
