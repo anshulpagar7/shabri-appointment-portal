@@ -3,7 +3,6 @@ import Header from "../components/Header";
 import { translations } from "../translations";
 import { supabase } from "../lib/supabase";
 import { useRealtime } from "../hooks/useRealtime";
-import { useRealtime } from "../hooks/useRealtime";
 import tdcLogo from "../assets/tdc-logo.jpeg";
 import tribalLogo from "../assets/tribal-logo.jpg";
 
