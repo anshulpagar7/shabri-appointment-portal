@@ -89,31 +89,79 @@ function Popup({ data, onComplete, onClose }) {
     return () => clearInterval(t);
   }, [onClose]);
 
-  const isBreak = data.type === "break";
+  const isBreak   = data.type === "break";
+  const isMeeting = data.type === "meeting";
+
+  // Colour scheme per type
+  const accentColor = isBreak ? "#F59E0B" : isMeeting ? "#7C3AED" : "#2563EB";
+  const typeLabel   = isBreak ? "☕ Break Time"
+    : isMeeting ? "📅 Executive Meeting Starting Soon"
+    : "⏰ Appointment Time Completed";
+  const typeTitle   = isBreak ? "Time for a short break!"
+    : isMeeting ? (data.title || "Executive Meeting")
+    : (data.citizen_name || "");
 
   return (
     <div style={popupStyles.overlay}>
-      <div style={{ ...popupStyles.box, borderTop: `5px solid ${isBreak ? "#F59E0B" : "#2563EB"}` }}>
+      <div style={{ ...popupStyles.box, borderTop: `5px solid ${accentColor}` }}>
+        {/* Countdown progress bar */}
         <div style={popupStyles.progressTrack}>
-          <div style={{ ...popupStyles.progressFill, width: `${(seconds / 30) * 100}%`, background: isBreak ? "#F59E0B" : "#2563EB" }} />
+          <div style={{ ...popupStyles.progressFill, width: `${(seconds / 30) * 100}%`, background: accentColor }} />
         </div>
 
         <div style={{ padding: "24px 28px 20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
             <div>
-              <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, color: isBreak ? "#D97706" : "#2563EB", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                {isBreak ? "☕ Break Time" : "⏰ Appointment Time Completed"}
+              <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, color: accentColor, letterSpacing: "0.1em", textTransform: "uppercase" }}>
+                {typeLabel}
               </p>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#111827" }}>
-                {isBreak ? "Time for a short break!" : data.citizen_name}
-              </h2>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#111827" }}>{typeTitle}</h2>
             </div>
-            <span style={{ fontSize: 12, color: "#9CA3AF", fontWeight: 700, background: "#F3F4F6", borderRadius: 99, padding: "4px 10px" }}>
+            <span style={{ fontSize: 12, color: "#9CA3AF", fontWeight: 700, background: "#F3F4F6", borderRadius: 99, padding: "4px 10px", flexShrink: 0, marginLeft: 12 }}>
               {seconds}s
             </span>
           </div>
 
-          {isBreak ? (
+          {/* ── Meeting popup body ── */}
+          {isMeeting && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 4 }}>
+              <div style={{ background: "linear-gradient(135deg,#F5F3FF,#EDE9FE)", border: "1px solid #DDD6FE", borderRadius: 12, padding: "16px 18px", marginBottom: 4 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <InfoRow icon="🏛️" label="Meeting With"  value={data.meeting_with || "—"} />
+                  <InfoRow icon="🕐" label="Scheduled At"  value={data.meeting_time || "—"} />
+                  {data.meeting_end_time && <InfoRow icon="⏱" label="Ends At" value={data.meeting_end_time} />}
+                  {data.notes && <InfoRow icon="📝" label="Notes" value={data.notes} />}
+                </div>
+              </div>
+
+              {/* Join button — prominent green CTA */}
+              {isMeetLinkValid(data.meet_link) ? (
+                <a
+                  href={data.meet_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                    background: "linear-gradient(135deg,#059669,#10B981)",
+                    color: "#fff", textDecoration: "none",
+                    padding: "14px 20px", borderRadius: 12,
+                    fontSize: 15, fontWeight: 800, letterSpacing: "0.02em",
+                    boxShadow: "0 6px 20px rgba(16,185,129,0.4)",
+                    animation: "pulse-join 1.5s ease infinite",
+                  }}
+                >
+                  <span style={{ fontSize: 20 }}>🔗</span> Join Meeting Now
+                </a>
+              ) : (
+                <div style={{ background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: 12, padding: "12px 18px", textAlign: "center", color: "#9CA3AF", fontSize: 13, fontWeight: 600 }}>
+                  🚫 No meeting link available
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Break popup body ── */}
+          {isBreak && (
             <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 12, padding: "14px 18px" }}>
               <p style={{ margin: "0 0 6px", fontSize: 13, color: "#92400E", lineHeight: 1.6 }}>
                 You've completed the previous session. Please take a short 5-minute break.
@@ -124,22 +172,25 @@ function Popup({ data, onComplete, onClose }) {
                 </p>
               )}
             </div>
-          ) : (
+          )}
+
+          {/* ── Appointment completed popup body ── */}
+          {!isBreak && !isMeeting && (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <InfoRow icon="📋" label="Purpose" value={data.purpose} />
+              <InfoRow icon="📋" label="Purpose"        value={data.purpose} />
               <InfoRow icon="🕐" label="Scheduled Time" value={`${data.appointment_time}${data.appointment_end_time ? ` – ${data.appointment_end_time}` : ""}`} />
-              <InfoRow icon="🎫" label="Appointment ID" value={data.appointment_id} />
+              <InfoRow icon="🎫" label="Appointment ID"  value={data.appointment_id} />
             </div>
           )}
 
-          <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-            {!isBreak && (
+          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+            {!isBreak && !isMeeting && (
               <button onClick={onComplete} style={popupStyles.completeBtn}>
                 ✅ Meeting Completed
               </button>
             )}
-            <button onClick={onClose} style={popupStyles.closeBtn}>
-              ❌ Close
+            <button onClick={onClose} style={{ ...popupStyles.closeBtn, flex: isBreak || isMeeting ? 1 : undefined }}>
+              ❌ {isMeeting ? "Dismiss" : "Close"}
             </button>
           </div>
         </div>
@@ -595,6 +646,19 @@ export default function MDDashboard() {
         }
       }
 
+      // Check upcoming executive meetings — fire popup 5 min before start
+      for (const m of meetings) {
+        if (!m.meeting_time) continue;
+        const startMin = parseTimeToMinutes(m.meeting_time);
+        const key = `meeting-${m.id}`;
+        // Trigger window: 5 minutes before the meeting starts
+        if (now >= startMin - 5 && now < startMin + 2 && !shownPopupsRef.current.has(key)) {
+          shownPopupsRef.current.add(key);
+          setPopup({ type: "meeting", ...m });
+          return;
+        }
+      }
+
       for (const brk of POMODORO_BREAKS) {
         const breakMin = parseTimeToMinutes(brk.time);
         const key = `break-${brk.time}`;
@@ -612,7 +676,7 @@ export default function MDDashboard() {
     checkPopups();
     const t = setInterval(checkPopups, 30000);
     return () => clearInterval(t);
-  }, [appointments]);
+  }, [appointments, meetings]);
 
   const handleMarkCompleted = async () => {
     if (!popup || popup.type !== "appointment") return;
@@ -639,6 +703,11 @@ export default function MDDashboard() {
           0%   { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(37,99,235,0.5); }
           70%  { transform: scale(1);    box-shadow: 0 0 0 12px rgba(37,99,235,0); }
           100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(37,99,235,0); }
+        }
+        @keyframes pulse-join {
+          0%   { box-shadow: 0 6px 20px rgba(16,185,129,0.4); }
+          50%  { box-shadow: 0 6px 28px rgba(16,185,129,0.7); transform: scale(1.02); }
+          100% { box-shadow: 0 6px 20px rgba(16,185,129,0.4); }
         }
         @keyframes fadeSlideUp {
           from { opacity: 0; transform: translateY(16px); }
@@ -827,6 +896,9 @@ export default function MDDashboard() {
           )}
         </div>
 
+        {/* TOUR DIARY */}
+        <TourDiarySection tourDiary={tourDiary} />
+
         {/* TODAY'S TIMELINE */}
         <div style={{ background: "#fff", borderRadius: 22, padding: 28, boxShadow: "0 8px 32px rgba(0,0,0,0.06)", marginBottom: 28 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
@@ -845,9 +917,6 @@ export default function MDDashboard() {
           </div>
           <TodayTimeline appointments={appointments} meetings={meetings} />
         </div>
-
-        {/* TOUR DIARY */}
-        <TourDiarySection tourDiary={tourDiary} />
 
         {/* FOCUS + QUEUE */}
         <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 18 }}>
