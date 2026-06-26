@@ -434,22 +434,35 @@ export default function CitizenBooking() {
   // ── Compute validity of each slot for the chosen duration ────────────────
   // A slot is a valid START slot if:
   //   1. Not in past (if today)
-  //   2. getOccupiedSlots returns non-null (doesn't cross a break)
-  //   3. None of the occupied run is in occupiedSlots
+  //   2. getOccupiedSlots returns non-null (doesn't cross a break/lunch/close)
+  //   3. None of the occupied run is already booked in Supabase
+  //
+  // Note: slots near the END of a Pomodoro group will be invalid for longer
+  // durations because the run would cross into the break gap.
+  // e.g. 12:45 is invalid as a 15-min start because 12:45+12:50+12:55 crosses the break.
+  // This is CORRECT — those slots are truly unavailable for that duration.
+  // We track the reason separately so the UI can explain it clearly.
 
-  function isSlotValidStart(slotStr) {
-    if (isToday && timeToMinutes(slotStr) <= currentMinutes) return false;
-    const run = getOccupiedSlots(slotStr, appointmentDuration);
-    if (!run) return false; // crosses break or invalid
-    for (const s of run) {
-      if (occupiedSlots.has(s)) return false;
+  function getSlotStatus(slotStr) {
+    if (isToday && timeToMinutes(slotStr) <= currentMinutes) {
+      return "past";
     }
-    return true;
+    if (occupiedSlots.has(slotStr)) {
+      return "booked";
+    }
+    const run = getOccupiedSlots(slotStr, appointmentDuration);
+    if (!run) {
+      // Crosses a break — not enough room in this group for chosen duration
+      return "too-short";
+    }
+    for (const s of run) {
+      if (occupiedSlots.has(s)) return "run-blocked"; // a slot in the run is booked
+    }
+    return "available";
   }
 
-  // Check if a slot is occupied (for greying it out regardless of duration logic)
-  function isSlotOccupied(slotStr) {
-    return occupiedSlots.has(slotStr);
+  function isSlotValidStart(slotStr) {
+    return getSlotStatus(slotStr) === "available";
   }
 
   function isSlotPast(slotStr) {
@@ -458,6 +471,11 @@ export default function CitizenBooking() {
 
   // Has any valid start slot at all?
   const hasAvailableSlots = ALL_SLOTS.some(s => isSlotValidStart(s));
+
+  // The full run of slots that are auto-selected based on chosen start + duration
+  const selectedRun = selectedSlot
+    ? (getOccupiedSlots(selectedSlot, appointmentDuration) ?? [])
+    : [];
 
   // ── Save appointment ──────────────────────────────────────────────────────
   const saveAppointment = async () => {
@@ -791,24 +809,10 @@ export default function CitizenBooking() {
                             slots={visible}
                             selectedSlot={selectedSlot}
                             setSelectedSlot={setSelectedSlot}
-                            isSlotValidStart={isSlotValidStart}
-                            isSlotOccupied={isSlotOccupied}
-                            isSlotPast={isSlotPast}
+                            getSlotStatus={getSlotStatus}
+                            selectedRun={selectedRun}
+                            appointmentDuration={appointmentDuration}
                           />
-                          {/* Show pomodoro break divider between groups, not after last */}
-                          {gi < morningGroups.length - 1 && morningGroups[gi+1].slots.some(s => !isSlotPast(s)) && (
-                            <div style={{
-                              display: "flex", alignItems: "center", gap: 10, margin: "8px 0",
-                            }}>
-                              <div style={{ flex: 1, height: 1, background: "#F3F4F6" }} />
-                              <span style={{
-                                fontSize: 11, fontWeight: 700, color: "#D97706",
-                                background: "#FEF3C7", padding: "3px 10px", borderRadius: 99,
-                                border: "1px solid #FDE68A",
-                              }}>☕ 5-min break</span>
-                              <div style={{ flex: 1, height: 1, background: "#F3F4F6" }} />
-                            </div>
-                          )}
                         </div>
                       );
                     })}
@@ -859,21 +863,10 @@ export default function CitizenBooking() {
                             slots={visible}
                             selectedSlot={selectedSlot}
                             setSelectedSlot={setSelectedSlot}
-                            isSlotValidStart={isSlotValidStart}
-                            isSlotOccupied={isSlotOccupied}
-                            isSlotPast={isSlotPast}
+                            getSlotStatus={getSlotStatus}
+                            selectedRun={selectedRun}
+                            appointmentDuration={appointmentDuration}
                           />
-                          {gi < afternoonGroups.length - 1 && afternoonGroups[gi+1].slots.some(s => !isSlotPast(s)) && (
-                            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "8px 0" }}>
-                              <div style={{ flex: 1, height: 1, background: "#F3F4F6" }} />
-                              <span style={{
-                                fontSize: 11, fontWeight: 700, color: "#D97706",
-                                background: "#FEF3C7", padding: "3px 10px", borderRadius: 99,
-                                border: "1px solid #FDE68A",
-                              }}>☕ 5-min break</span>
-                              <div style={{ flex: 1, height: 1, background: "#F3F4F6" }} />
-                            </div>
-                          )}
                         </div>
                       );
                     })}
@@ -1160,66 +1153,125 @@ export default function CitizenBooking() {
 }
 
 // ─── SlotRow sub-component ────────────────────────────────────────────────────
+//
+// Status values from getSlotStatus():
+//   "available"   → white, clickable
+//   "past"        → very light grey, not clickable
+//   "booked"      → pink/red tint, "Booked" label, not clickable
+//   "too-short"   → very light grey (not enough room in group for duration), not clickable
+//   "run-blocked" → light grey (a slot in its run is taken), not clickable
+//
+// selectedRun: array of slot strings currently auto-selected (start + consecutive)
 
-function SlotRow({ slots, selectedSlot, setSelectedSlot, isSlotValidStart, isSlotOccupied, isSlotPast }) {
+function SlotRow({ slots, selectedSlot, setSelectedSlot, getSlotStatus, selectedRun, appointmentDuration }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
       {slots.map((slotStr, i) => {
-        const isSelected = selectedSlot === slotStr;
-        const isValid = isSlotValidStart(slotStr);
-        const isOccupied = isSlotOccupied(slotStr);
-        const isPast = isSlotPast(slotStr);
-        const isDisabled = !isValid; // occupied, past, or crosses break
+        const status    = getSlotStatus(slotStr);
+        const isStart   = selectedSlot === slotStr;
+        const isInRun   = !isStart && selectedRun.includes(slotStr);
+        const isClickable = status === "available";
+
+        // ── Visual config per state ──────────────────────────────────────
+        let bg, border, color, fontWeight, shadow, scale, opacity, sublabel;
+
+        if (isStart) {
+          // The tapped start slot — bold blue
+          bg = "linear-gradient(135deg,#2563EB,#1E3A8A)";
+          border = "#2563EB";
+          color = "#fff";
+          fontWeight = 700;
+          shadow = "0 4px 12px rgba(37,99,235,0.35)";
+          scale = "scale(1.06)";
+          opacity = 1;
+          sublabel = <span style={{ display:"block", fontSize:9, color:"rgba(255,255,255,0.85)", fontWeight:700, marginTop:2 }}>Start</span>;
+
+        } else if (isInRun) {
+          // Auto-selected consecutive slots — light blue
+          bg = "#DBEAFE";
+          border = "#93C5FD";
+          color = "#1E3A8A";
+          fontWeight = 700;
+          shadow = "none";
+          scale = "scale(1.03)";
+          opacity = 1;
+          sublabel = <span style={{ display:"block", fontSize:9, color:"#2563EB", fontWeight:700, marginTop:2 }}>✓</span>;
+
+        } else if (status === "booked") {
+          // Already booked by someone else — pink tint
+          bg = "#FEE2E2";
+          border = "#FECACA";
+          color = "#9CA3AF";
+          fontWeight = 500;
+          shadow = "none";
+          scale = "scale(1)";
+          opacity = 1;
+          sublabel = <span style={{ display:"block", fontSize:9, color:"#EF4444", fontWeight:700, marginTop:2 }}>Booked</span>;
+
+        } else if (status === "too-short" || status === "run-blocked") {
+          // Not enough consecutive room for chosen duration — subtle grey, no alarming label
+          bg = "#F9FAFB";
+          border = "#E5E7EB";
+          color = "#C4C4C4";
+          fontWeight = 400;
+          shadow = "none";
+          scale = "scale(1)";
+          opacity = 0.6;
+          sublabel = null;
+
+        } else if (status === "past") {
+          // Past time — very faint
+          bg = "#F9FAFB";
+          border = "#E5E7EB";
+          color = "#D1D5DB";
+          fontWeight = 400;
+          shadow = "none";
+          scale = "scale(1)";
+          opacity = 0.45;
+          sublabel = null;
+
+        } else {
+          // "available" and not in run — normal white
+          bg = "#fff";
+          border = "#E5E7EB";
+          color = "#374151";
+          fontWeight = 500;
+          shadow = "none";
+          scale = "scale(1)";
+          opacity = 1;
+          sublabel = null;
+        }
 
         return (
           <button
             key={i}
-            onClick={() => isValid && setSelectedSlot(slotStr)}
-            disabled={isDisabled}
+            onClick={() => isClickable && setSelectedSlot(slotStr)}
+            disabled={!isClickable}
             title={
-              isPast ? "Past time" :
-              isOccupied ? "Already booked" :
-              !isValid ? "Not available for selected duration" :
+              status === "past"        ? "This time has already passed" :
+              status === "booked"      ? "Already booked" :
+              status === "too-short"   ? `Need ${appointmentDuration} consecutive minutes — not enough room here` :
+              status === "run-blocked" ? "A slot in this time range is already booked" :
               ""
             }
             style={{
               padding: "10px 4px",
               borderRadius: 10,
-              border: `2px solid ${
-                isSelected ? "#2563EB" :
-                isDisabled ? "#E5E7EB" :
-                "#E5E7EB"
-              }`,
-              background:
-                isSelected
-                  ? "linear-gradient(135deg,#2563EB,#1E3A8A)"
-                  : isOccupied
-                  ? "#FEE2E2"
-                  : isDisabled
-                  ? "#F3F4F6"
-                  : "#F9FAFB",
-              color:
-                isSelected ? "#fff" :
-                isOccupied ? "#9CA3AF" :
-                isDisabled ? "#9CA3AF" :
-                "#374151",
-              fontWeight: isSelected ? 700 : 500,
+              border: `2px solid ${border}`,
+              background: bg,
+              color,
+              fontWeight,
               fontSize: 12,
-              cursor: isDisabled ? "not-allowed" : "pointer",
-              opacity: isDisabled && !isOccupied ? 0.45 : 1,
-              transform: isSelected ? "scale(1.06)" : "scale(1)",
+              cursor: isClickable ? "pointer" : "not-allowed",
+              opacity,
+              transform: scale,
               transition: "all 0.15s",
-              boxShadow: isSelected ? "0 4px 12px rgba(37,99,235,0.3)" : "none",
-              position: "relative",
+              boxShadow: shadow,
+              minHeight: 52,
             }}
           >
             {slotStr.replace(" PM","").replace(" AM","")}
-            {isOccupied && (
-              <span style={{
-                display: "block", fontSize: 9, color: "#EF4444",
-                fontWeight: 700, marginTop: 2, letterSpacing: "0.02em",
-              }}>Booked</span>
-            )}
+            {sublabel}
           </button>
         );
       })}
