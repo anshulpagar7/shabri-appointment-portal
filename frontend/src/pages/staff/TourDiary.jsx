@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
+import { useRealtime } from "../../hooks/useRealtime";
 import tribalLogoSrc from "../../assets/tribal-logo.jpg";
 import tdcLogoSrc    from "../../assets/tdc-logo.jpeg";
 
@@ -194,6 +195,9 @@ export default function TourDiary() {
   const [filterDest, setFilterDest]     = useState("All");
 
   useEffect(() => { fetchTours(); }, []);
+
+  // ── Realtime: tour diary updates instantly across devices ──
+  useRealtime("tour_diary", fetchTours);
 
   async function fetchTours() {
     setLoading(true);
