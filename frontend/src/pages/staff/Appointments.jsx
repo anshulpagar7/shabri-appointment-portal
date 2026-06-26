@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
+import { useRealtime } from "../../hooks/useRealtime";
 
 // ─── Status Config ────────────────────────────────────────────────────────────
 
@@ -147,6 +148,9 @@ export default function Appointments() {
   useEffect(() => {
     fetchAppointments();
   }, [selectedDate]);
+
+  // ── Realtime: refresh whenever appointments change in any tab/device ──
+  useRealtime("appointments", fetchAppointments);
 
   const fetchAppointments = async () => {
     const { data, error } = await supabase
