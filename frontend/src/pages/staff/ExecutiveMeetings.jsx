@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
+import { useRealtime } from "../../hooks/useRealtime";
 
 function timeToMinutes(time) {
   if (!time) return 0;
@@ -81,6 +82,9 @@ export default function ExecutiveMeetings() {
   const [pendingSave, setPendingSave] = useState(null);
 
   useEffect(() => { fetchMeetings(); }, []);
+
+  // ── Realtime: meetings and appointments refresh instantly ──
+  useRealtime({ executive_meetings: fetchMeetings, appointments: fetchMeetings });
 
   useEffect(() => {
     const interval = setInterval(() => { setMeetings(prev => [...prev]); }, 30000);
