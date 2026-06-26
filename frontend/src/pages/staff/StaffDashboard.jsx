@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabase";
+import { useRealtime } from "../../hooks/useRealtime";
 
 function todayStr() {
   const d = new Date();
@@ -20,100 +21,55 @@ export default function StaffDashboard() {
   const [appointments, setAppointments] = useState([]);
   const [meetings, setMeetings] = useState([]);
 
-  useEffect(() => {
-    fetchAppointments();
-    fetchMeetings();
-  }, []);
-
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
     const today = todayStr();
-
     const { data, error } = await supabase
       .from("appointments")
       .select("*")
       .eq("appointment_date", today)
       .order("appointment_time", { ascending: true });
-
-    if (error) {
-      console.log(error);
-      return;
-    }
-
+    if (error) { console.log(error); return; }
     setAppointments(data);
-  };
+  }, []);
 
-  const fetchMeetings = async () => {
+  const fetchMeetings = useCallback(async () => {
     const today = todayStr();
-
     const { data, error } = await supabase
       .from("executive_meetings")
       .select("*")
       .eq("meeting_date", today)
       .order("meeting_time", { ascending: true });
-
-    if (error) {
-      console.log(error);
-      return;
-    }
-
+    if (error) { console.log(error); return; }
     setMeetings(data);
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchAppointments();
+    fetchMeetings();
+  }, [fetchAppointments, fetchMeetings]);
+
+  // ── Realtime subscriptions ────────────────────────────────────────────────
+  useRealtime({ appointments: fetchAppointments, executive_meetings: fetchMeetings });
 
   const greeting = getGreeting();
 
   const stats = [
-    {
-      label: "Appointments Today",
-      value: appointments.length,
-      icon: "📋",
-      color: "#2563EB",
-      bg: "#EFF6FF",
-      trend: "Live data",
-    },
-    {
-      label: "Waiting",
-      value: appointments.filter(a => a.status === "Waiting").length,
-      icon: "⏳",
-      color: "#F59E0B",
-      bg: "#FFFBEB",
-      trend: "Live data",
-    },
-    {
-      label: "Completed",
-      value: appointments.filter(a => a.status === "Completed").length,
-      icon: "✅",
-      color: "#10B981",
-      bg: "#ECFDF5",
-      trend: "Live data",
-    },
-    {
-      label: "No Shows",
-      value: appointments.filter(a => a.status === "No Show").length,
-      icon: "❌",
-      color: "#EF4444",
-      bg: "#FEF2F2",
-      trend: "Live data",
-    },
-    {
-      label: "Reschedule Required",
-      value: appointments.filter(a => a.status === "Reschedule Required").length,
-      icon: "🔁",
-      color: "#7C3AED",
-      bg: "#F5F3FF",
-      trend: "Live data",
-    },
+    { label: "Appointments Today",   value: appointments.length,                                               icon: "📋", color: "#2563EB", bg: "#EFF6FF",  trend: "Live data" },
+    { label: "Waiting",              value: appointments.filter(a => a.status === "Waiting").length,           icon: "⏳", color: "#F59E0B", bg: "#FFFBEB",  trend: "Live data" },
+    { label: "Completed",            value: appointments.filter(a => a.status === "Completed").length,         icon: "✅", color: "#10B981", bg: "#ECFDF5",  trend: "Live data" },
+    { label: "No Shows",             value: appointments.filter(a => a.status === "No Show").length,           icon: "❌", color: "#EF4444", bg: "#FEF2F2",  trend: "Live data" },
+    { label: "Reschedule Required",  value: appointments.filter(a => a.status === "Reschedule Required").length, icon: "🔁", color: "#7C3AED", bg: "#F5F3FF", trend: "Live data" },
   ];
 
-  // Real queue derived from appointments table
-  const nowServing = appointments.find(a => a.status === "In Cabin");
-  const upNext = appointments.find(a => a.status === "Waiting");
+  const nowServing   = appointments.find(a => a.status === "In Cabin");
+  const upNext       = appointments.find(a => a.status === "Waiting");
   const waitingCount = appointments.filter(a => a.status === "Waiting").length;
 
   const statusColor = {
     Approved: { bg: "#EFF6FF", color: "#2563EB" },
-    Waiting: { bg: "#FFFBEB", color: "#D97706" },
+    Waiting:  { bg: "#FFFBEB", color: "#D97706" },
     Completed: { bg: "#ECFDF5", color: "#059669" },
-    Pending: { bg: "#F5F3FF", color: "#7C3AED" },
+    Pending:  { bg: "#F5F3FF", color: "#7C3AED" },
     "No Show": { bg: "#FEF2F2", color: "#DC2626" },
     "In Cabin": { bg: "#DBEAFE", color: "#1D4ED8" },
     "Reschedule Required": { bg: "#F5F3FF", color: "#7C3AED" },
@@ -121,7 +77,6 @@ export default function StaffDashboard() {
 
   return (
     <div style={styles.page}>
-      {/* Page Header */}
       <div style={styles.pageHeader}>
         <div>
           <p style={styles.pageEyebrow}>STAFF OPERATIONS CENTER</p>
@@ -139,7 +94,6 @@ export default function StaffDashboard() {
         </div>
       </div>
 
-      {/* Stats Cards */}
       <div style={styles.statsGrid}>
         {stats.map(s => (
           <div key={s.label} style={styles.statCard}>
@@ -160,9 +114,7 @@ export default function StaffDashboard() {
         ))}
       </div>
 
-      {/* Middle Section */}
       <div style={styles.midGrid}>
-        {/* Queue Status */}
         <div style={styles.queueCard}>
           <div style={styles.cardHeader}>
             <p style={styles.cardEyebrow}>🔢 CURRENT QUEUE</p>
@@ -170,15 +122,9 @@ export default function StaffDashboard() {
           <div style={styles.queueDisplay}>
             <div style={styles.tokenBig}>
               <p style={styles.tokenLabel}>NOW SERVING</p>
-              <div style={styles.tokenNumber}>
-                {nowServing ? (nowServing.appointment_id || "—") : "—"}
-              </div>
-              <p style={styles.tokenName}>
-                {nowServing ? nowServing.citizen_name : "No one in cabin"}
-              </p>
-              <p style={styles.tokenPurpose}>
-                {nowServing ? nowServing.purpose : ""}
-              </p>
+              <div style={styles.tokenNumber}>{nowServing ? (nowServing.appointment_id || "—") : "—"}</div>
+              <p style={styles.tokenName}>{nowServing ? nowServing.citizen_name : "No one in cabin"}</p>
+              <p style={styles.tokenPurpose}>{nowServing ? nowServing.purpose : ""}</p>
             </div>
             <div style={styles.queueStats}>
               <div style={styles.queueStat}>
@@ -201,12 +147,7 @@ export default function StaffDashboard() {
             <p style={styles.nextLabel}>UP NEXT</p>
             <p style={styles.nextName}>
               {upNext ? (
-                <>
-                  {upNext.citizen_name} &nbsp;
-                  <span style={{ color: "#94A3B8", fontWeight: "400" }}>
-                    • {upNext.appointment_id}
-                  </span>
-                </>
+                <>{upNext.citizen_name} &nbsp;<span style={{ color: "#94A3B8", fontWeight: "400" }}>• {upNext.appointment_id}</span></>
               ) : (
                 <span style={{ color: "#94A3B8", fontWeight: "400" }}>No one waiting</span>
               )}
@@ -214,7 +155,6 @@ export default function StaffDashboard() {
           </div>
         </div>
 
-        {/* Upcoming Meetings */}
         <div style={styles.card}>
           <p style={styles.cardEyebrow}>🤝 EXECUTIVE MEETINGS</p>
           <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -223,9 +163,9 @@ export default function StaffDashboard() {
             )}
             {meetings.map((m) => {
               const dateObj = m.meeting_date ? new Date(m.meeting_date) : null;
-              const day = dateObj ? dateObj.getDate() : "—";
+              const day   = dateObj ? dateObj.getDate() : "—";
               const month = dateObj ? dateObj.toLocaleString("default", { month: "short" }) : "";
-              const mode = m.meet_link ? "Google Meet" : "Physical";
+              const mode  = m.meet_link ? "Google Meet" : "Physical";
               return (
                 <div key={m.id} style={styles.meetingItem}>
                   <div style={styles.meetingDateBox}>
@@ -246,7 +186,6 @@ export default function StaffDashboard() {
         </div>
       </div>
 
-      {/* Appointments Table */}
       <div style={{ ...styles.card, marginTop: "24px" }}>
         <div style={styles.tableHeader}>
           <p style={styles.cardEyebrow}>📋 TODAY'S APPOINTMENTS</p>
@@ -278,9 +217,7 @@ export default function StaffDashboard() {
                     <td style={styles.td}><span style={styles.officerText}>{a.officer_name}</span></td>
                     <td style={styles.td}><span style={styles.timeText}>{a.appointment_time}</span></td>
                     <td style={styles.td}>
-                      <span style={{ ...styles.statusBadge, background: sc.bg, color: sc.color }}>
-                        {a.status}
-                      </span>
+                      <span style={{ ...styles.statusBadge, background: sc.bg, color: sc.color }}>{a.status}</span>
                     </td>
                   </tr>
                 );
@@ -294,116 +231,33 @@ export default function StaffDashboard() {
 }
 
 const styles = {
-  page: {
-    padding: "36px 40px",
-    background: "#F8FAFC",
-    minHeight: "100vh",
-    fontFamily: "'Segoe UI', system-ui, sans-serif",
-  },
-  pageHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginBottom: "30px",
-    flexWrap: "wrap",
-    gap: "16px",
-  },
-  pageEyebrow: {
-    margin: "0 0 6px",
-    fontSize: "11px",
-    fontWeight: "700",
-    letterSpacing: "2px",
-    color: "#2563EB",
-  },
+  page: { padding: "36px 40px", background: "#F8FAFC", minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif" },
+  pageHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "30px", flexWrap: "wrap", gap: "16px" },
+  pageEyebrow: { margin: "0 0 6px", fontSize: "11px", fontWeight: "700", letterSpacing: "2px", color: "#2563EB" },
   pageTitle: { margin: "0 0 6px", fontSize: "32px", fontWeight: "800", color: "#111827" },
   pageSub: { margin: 0, fontSize: "14px", color: "#64748B" },
   headerActions: { display: "flex", gap: "12px", alignItems: "center" },
-  headerBadge: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    background: "#ECFDF5",
-    border: "1px solid #A7F3D0",
-    borderRadius: "20px",
-    padding: "8px 14px",
-  },
-  pulseDot: {
-    width: "8px",
-    height: "8px",
-    borderRadius: "50%",
-    background: "#10B981",
-    display: "inline-block",
-  },
-  timeBadge: {
-    background: "#fff",
-    border: "1px solid #E2E8F0",
-    borderRadius: "20px",
-    padding: "8px 14px",
-    fontSize: "13px",
-    color: "#374151",
-    fontWeight: "500",
-  },
-  statsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: "20px",
-    marginBottom: "24px",
-  },
-  statCard: {
-    background: "#fff",
-    borderRadius: "16px",
-    padding: "24px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)",
-  },
+  headerBadge: { display: "flex", alignItems: "center", gap: "8px", background: "#ECFDF5", border: "1px solid #A7F3D0", borderRadius: "20px", padding: "8px 14px" },
+  pulseDot: { width: "8px", height: "8px", borderRadius: "50%", background: "#10B981", display: "inline-block" },
+  timeBadge: { background: "#fff", border: "1px solid #E2E8F0", borderRadius: "20px", padding: "8px 14px", fontSize: "13px", color: "#374151", fontWeight: "500" },
+  statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "20px", marginBottom: "24px" },
+  statCard: { background: "#fff", borderRadius: "16px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)" },
   statTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" },
   statLabel: { margin: "0 0 6px", fontSize: "13px", color: "#64748B", fontWeight: "500" },
   statValue: { margin: 0, fontSize: "36px", fontWeight: "800", lineHeight: 1 },
-  statIconBox: {
-    width: "48px",
-    height: "48px",
-    borderRadius: "12px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  statIconBox: { width: "48px", height: "48px", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" },
   statBar: { height: "4px", borderRadius: "4px", overflow: "hidden", marginBottom: "10px" },
   statBarFill: { height: "100%", borderRadius: "4px", transition: "width 0.5s ease" },
   statTrend: { margin: 0, fontSize: "12px", color: "#94A3B8" },
-  midGrid: {
-    display: "grid",
-    gridTemplateColumns: "2fr 1.2fr",
-    gap: "20px",
-  },
-  queueCard: {
-    background: "#fff",
-    borderRadius: "16px",
-    padding: "24px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)",
-  },
-  card: {
-    background: "#fff",
-    borderRadius: "16px",
-    padding: "24px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)",
-  },
+  midGrid: { display: "grid", gridTemplateColumns: "2fr 1.2fr", gap: "20px" },
+  queueCard: { background: "#fff", borderRadius: "16px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)" },
+  card: { background: "#fff", borderRadius: "16px", padding: "24px", boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)" },
   cardHeader: { marginBottom: "4px" },
-  cardEyebrow: {
-    margin: 0,
-    fontSize: "11px",
-    fontWeight: "700",
-    letterSpacing: "1.5px",
-    color: "#94A3B8",
-  },
+  cardEyebrow: { margin: 0, fontSize: "11px", fontWeight: "700", letterSpacing: "1.5px", color: "#94A3B8" },
   queueDisplay: { display: "flex", gap: "24px", alignItems: "center", margin: "20px 0 16px" },
   tokenBig: { flex: 1, textAlign: "center" },
   tokenLabel: { margin: "0 0 4px", fontSize: "10px", fontWeight: "700", letterSpacing: "1.5px", color: "#94A3B8" },
-  tokenNumber: {
-    fontSize: "56px",
-    fontWeight: "900",
-    color: "#2563EB",
-    lineHeight: 1,
-    margin: "4px 0",
-  },
+  tokenNumber: { fontSize: "56px", fontWeight: "900", color: "#2563EB", lineHeight: 1, margin: "4px 0" },
   tokenName: { margin: "4px 0 2px", fontWeight: "700", fontSize: "15px", color: "#111827" },
   tokenPurpose: { margin: 0, fontSize: "12px", color: "#64748B" },
   queueStats: { display: "flex", flexDirection: "column", gap: "12px" },
@@ -411,32 +265,11 @@ const styles = {
   queueStatNum: { fontSize: "22px", fontWeight: "800", color: "#111827" },
   queueStatLabel: { fontSize: "10px", color: "#94A3B8", fontWeight: "600", letterSpacing: "0.5px" },
   queueStatDivider: { height: "1px", width: "40px", background: "#F1F5F9" },
-  nextCard: {
-    background: "#F8FAFC",
-    borderRadius: "10px",
-    padding: "12px 16px",
-    border: "1px solid #E2E8F0",
-  },
+  nextCard: { background: "#F8FAFC", borderRadius: "10px", padding: "12px 16px", border: "1px solid #E2E8F0" },
   nextLabel: { margin: "0 0 4px", fontSize: "10px", fontWeight: "700", letterSpacing: "1px", color: "#94A3B8" },
   nextName: { margin: 0, fontSize: "14px", fontWeight: "700", color: "#111827" },
-  meetingItem: {
-    display: "flex",
-    gap: "12px",
-    alignItems: "center",
-    padding: "12px",
-    background: "#F8FAFC",
-    borderRadius: "10px",
-    border: "1px solid #E2E8F0",
-  },
-  meetingDateBox: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    background: "#2563EB",
-    borderRadius: "8px",
-    padding: "6px 10px",
-    minWidth: "40px",
-  },
+  meetingItem: { display: "flex", gap: "12px", alignItems: "center", padding: "12px", background: "#F8FAFC", borderRadius: "10px", border: "1px solid #E2E8F0" },
+  meetingDateBox: { display: "flex", flexDirection: "column", alignItems: "center", background: "#2563EB", borderRadius: "8px", padding: "6px 10px", minWidth: "40px" },
   meetingDay: { color: "#fff", fontSize: "16px", fontWeight: "800", lineHeight: 1 },
   meetingMonth: { color: "rgba(255,255,255,0.75)", fontSize: "10px", fontWeight: "600", letterSpacing: "0.5px" },
   meetingTitle: { margin: "0 0 3px", fontSize: "13px", fontWeight: "600", color: "#111827" },
@@ -444,57 +277,17 @@ const styles = {
   meetingModeBadge: { fontSize: "18px" },
   tableHeader: { display: "flex", justifyContent: "space-between", alignItems: "center" },
   tableHeaderRight: {},
-  tableCount: {
-    background: "#F1F5F9",
-    color: "#64748B",
-    fontSize: "12px",
-    fontWeight: "600",
-    padding: "4px 10px",
-    borderRadius: "20px",
-  },
+  tableCount: { background: "#F1F5F9", color: "#64748B", fontSize: "12px", fontWeight: "600", padding: "4px 10px", borderRadius: "20px" },
   table: { width: "100%", borderCollapse: "collapse" },
   thead: { background: "#F8FAFC" },
-  th: {
-    padding: "10px 16px",
-    textAlign: "left",
-    fontSize: "11px",
-    fontWeight: "700",
-    color: "#94A3B8",
-    letterSpacing: "0.8px",
-    textTransform: "uppercase",
-    borderBottom: "1px solid #E2E8F0",
-  },
+  th: { padding: "10px 16px", textAlign: "left", fontSize: "11px", fontWeight: "700", color: "#94A3B8", letterSpacing: "0.8px", textTransform: "uppercase", borderBottom: "1px solid #E2E8F0" },
   tr: { borderBottom: "1px solid #F1F5F9" },
   td: { padding: "14px 16px", fontSize: "14px", color: "#374151" },
   citizenCell: { display: "flex", gap: "10px", alignItems: "center" },
-  avatar: {
-    width: "32px",
-    height: "32px",
-    borderRadius: "8px",
-    background: "linear-gradient(135deg, #2563EB, #1E3A8A)",
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: "13px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
+  avatar: { width: "32px", height: "32px", borderRadius: "8px", background: "linear-gradient(135deg, #2563EB, #1E3A8A)", color: "#fff", fontWeight: "700", fontSize: "13px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   citizenName: { fontWeight: "600", color: "#111827" },
-  purposeTag: {
-    background: "#EFF6FF",
-    color: "#2563EB",
-    fontSize: "12px",
-    fontWeight: "600",
-    padding: "4px 10px",
-    borderRadius: "6px",
-  },
+  purposeTag: { background: "#EFF6FF", color: "#2563EB", fontSize: "12px", fontWeight: "600", padding: "4px 10px", borderRadius: "6px" },
   officerText: { color: "#64748B", fontSize: "13px" },
   timeText: { fontWeight: "600", fontFamily: "monospace", fontSize: "13px" },
-  statusBadge: {
-    padding: "5px 12px",
-    borderRadius: "20px",
-    fontSize: "12px",
-    fontWeight: "700",
-  },
+  statusBadge: { padding: "5px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: "700" },
 };
