@@ -2,9 +2,53 @@ import { useState, useEffect } from "react";
 import tribalLogo from "../../assets/tribal-logo.jpg";
 import { supabase } from "../../lib/supabase";
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function getTodayLocalDate() {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function getDynamicGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return "Good Morning, Madam 🌿";
+  if (hour >= 12 && hour < 17) return "Good Afternoon, Madam ☀️";
+  if (hour >= 17 && hour < 21) return "Good Evening, Madam 🌆";
+  return "Good Night, Madam 🌙";
+}
+
+function getMeetingTimeLabel(timeStr) {
+  if (!timeStr) return "";
+  // timeStr expected as "HH:MM" or "HH:MM:SS"
+  const [hourStr] = timeStr.split(":");
+  const hour = parseInt(hourStr, 10);
+  if (hour >= 5 && hour < 12) return "Morning";
+  if (hour >= 12 && hour < 17) return "Afternoon";
+  if (hour >= 17 && hour < 21) return "Evening";
+  return "Night";
+}
+
+function isMeetLinkValid(link) {
+  return link && link.trim() !== "" && link.trim().toLowerCase() !== "no";
+}
+
+function sortByTime(arr, key) {
+  return [...arr].sort((a, b) => {
+    const ta = a[key] ?? "";
+    const tb = b[key] ?? "";
+    return ta.localeCompare(tb);
+  });
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
+
 export default function MDDashboard() {
   const [appointments, setAppointments] = useState([]);
   const [meetings, setMeetings] = useState([]);
+  const today = getTodayLocalDate();
 
   useEffect(() => {
     fetchAppointments();
@@ -15,28 +59,37 @@ export default function MDDashboard() {
     const { data, error } = await supabase
       .from("appointments")
       .select("*")
+      .eq("appointment_date", today)
       .order("appointment_time", { ascending: true });
     if (error) {
       console.log(error);
       return;
     }
-    setAppointments(data);
+    setAppointments(data ?? []);
   };
 
   const fetchMeetings = async () => {
     const { data, error } = await supabase
       .from("executive_meetings")
-      .select("*");
+      .select("*")
+      .eq("meeting_date", today);
     if (error) {
       console.log(error);
       return;
     }
-    setMeetings(data);
+    // Sort by meeting_time ASC
+    setMeetings(sortByTime(data ?? [], "meeting_time"));
   };
 
-  // Derived data
+  // ── Derived data (today-only records already filtered by query) ──
   const currentCitizen = appointments.find(a => a.status === "In Cabin") || null;
-  const waitingCitizens = appointments.filter(a => a.status === "Waiting");
+
+  // Waiting citizens sorted by appointment_time ASC
+  const waitingCitizens = sortByTime(
+    appointments.filter(a => a.status === "Waiting"),
+    "appointment_time"
+  );
+
   const nextCitizen = waitingCitizens[0] || null;
   const completedCount = appointments.filter(a => a.status === "Completed").length;
   const totalCount = appointments.length;
@@ -148,7 +201,7 @@ export default function MDDashboard() {
               Executive Monitoring Dashboard
             </p>
             <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800, color: "#fff", lineHeight: 1.2 }}>
-              Good Morning, Madam 🌿
+              {getDynamicGreeting()}
             </h1>
             <p style={{ margin: "10px 0 0", fontSize: 15, color: "rgba(255,255,255,0.75)" }}>
               You have <strong style={{ color: "#fff" }}>{totalCount} citizens</strong> scheduled and <strong style={{ color: "#fff" }}>{meetings.length} executive meetings</strong> today.
@@ -328,107 +381,110 @@ export default function MDDashboard() {
           {meetings.length === 0 ? (
             <div style={{ textAlign: "center", padding: "32px 0", color: "#9CA3AF" }}>
               <div style={{ fontSize: 36, marginBottom: 10 }}>📭</div>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>No upcoming meetings today</p>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>No executive meetings scheduled today</p>
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 18 }}>
-              {meetings.map((meeting, index) => (
-                <div
-                  key={meeting.id ?? index}
-                  className="meeting-card"
-                  style={{
-                    background: "linear-gradient(135deg,#F8FAFF,#F0F4FF)",
-                    padding: "22px 24px",
-                    borderRadius: 18,
-                    border: "1px solid #DBEAFE",
-                    boxShadow: "0 4px 16px rgba(37,99,235,0.07)",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
-                    <div>
-                      <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#6B7280", letterSpacing: "0.06em", textTransform: "uppercase" }}>
-                        {index === 0 ? "Afternoon" : "Evening"}
-                      </p>
-                      <h3 style={{ margin: "4px 0 0", fontSize: 17, fontWeight: 800, color: "#111827" }}>{meeting.title}</h3>
-                    </div>
-                    <span style={{
-                      background: "#fff",
-                      color: "#2563EB",
-                      fontSize: 13,
-                      fontWeight: 700,
-                      padding: "5px 12px",
-                      borderRadius: 99,
-                      border: "1px solid #BFDBFE",
-                      flexShrink: 0,
-                      marginLeft: 10,
-                    }}>{meeting.meeting_time}</span>
-                  </div>
-
-                  <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 18 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 14 }}>🏛️</span>
-                      <span style={{ fontSize: 13, color: "#374151", fontWeight: 500 }}>{meeting.meeting_with}</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 14 }}>🎥</span>
-                      <span style={{ fontSize: 13, color: "#374151", fontWeight: 500 }}>{meeting.mode ?? "Google Meet"}</span>
-                    </div>
-                    {meeting.status && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 14 }}>📌</span>
-                        <span style={{ fontSize: 13, color: "#374151", fontWeight: 500 }}>{meeting.status}</span>
+              {meetings.map((meeting, index) => {
+                const linkValid = isMeetLinkValid(meeting.meet_link);
+                return (
+                  <div
+                    key={meeting.id ?? index}
+                    className="meeting-card"
+                    style={{
+                      background: "linear-gradient(135deg,#F8FAFF,#F0F4FF)",
+                      padding: "22px 24px",
+                      borderRadius: 18,
+                      border: "1px solid #DBEAFE",
+                      boxShadow: "0 4px 16px rgba(37,99,235,0.07)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
+                      <div>
+                        <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#6B7280", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                          {getMeetingTimeLabel(meeting.meeting_time)}
+                        </p>
+                        <h3 style={{ margin: "4px 0 0", fontSize: 17, fontWeight: 800, color: "#111827" }}>{meeting.title}</h3>
                       </div>
+                      <span style={{
+                        background: "#fff",
+                        color: "#2563EB",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        padding: "5px 12px",
+                        borderRadius: 99,
+                        border: "1px solid #BFDBFE",
+                        flexShrink: 0,
+                        marginLeft: 10,
+                      }}>{meeting.meeting_time}</span>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 18 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 14 }}>🏛️</span>
+                        <span style={{ fontSize: 13, color: "#374151", fontWeight: 500 }}>{meeting.meeting_with}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 14 }}>🎥</span>
+                        <span style={{ fontSize: 13, color: "#374151", fontWeight: 500 }}>{meeting.mode ?? "Google Meet"}</span>
+                      </div>
+                      {meeting.status && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 14 }}>📌</span>
+                          <span style={{ fontSize: 13, color: "#374151", fontWeight: 500 }}>{meeting.status}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {linkValid ? (
+                      <a
+                        href={meeting.meet_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="join-btn"
+                        style={{
+                          display: "block",
+                          background: "linear-gradient(135deg,#10B981,#059669)",
+                          color: "white",
+                          border: "none",
+                          padding: "11px 22px",
+                          borderRadius: 12,
+                          cursor: "pointer",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          letterSpacing: "0.03em",
+                          boxShadow: "0 4px 12px rgba(16,185,129,0.35)",
+                          width: "100%",
+                          textAlign: "center",
+                          textDecoration: "none",
+                          boxSizing: "border-box",
+                        }}
+                      >
+                        🔗 Join Meeting
+                      </a>
+                    ) : (
+                      <button
+                        disabled
+                        style={{
+                          background: "#E5E7EB",
+                          color: "#9CA3AF",
+                          border: "none",
+                          padding: "11px 22px",
+                          borderRadius: 12,
+                          cursor: "not-allowed",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          letterSpacing: "0.03em",
+                          width: "100%",
+                          opacity: 0.7,
+                        }}
+                      >
+                        🚫 No Meeting Link
+                      </button>
                     )}
                   </div>
-
-                  {meeting.meeting_link ? (
-                    <a
-                      href={meeting.meeting_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="join-btn"
-                      style={{
-                        display: "block",
-                        background: "linear-gradient(135deg,#10B981,#059669)",
-                        color: "white",
-                        border: "none",
-                        padding: "11px 22px",
-                        borderRadius: 12,
-                        cursor: "pointer",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        letterSpacing: "0.03em",
-                        boxShadow: "0 4px 12px rgba(16,185,129,0.35)",
-                        width: "100%",
-                        textAlign: "center",
-                        textDecoration: "none",
-                        boxSizing: "border-box",
-                      }}
-                    >
-                      🔗 Join Meeting
-                    </a>
-                  ) : (
-                    <button
-                      className="join-btn"
-                      style={{
-                        background: "linear-gradient(135deg,#10B981,#059669)",
-                        color: "white",
-                        border: "none",
-                        padding: "11px 22px",
-                        borderRadius: 12,
-                        cursor: "pointer",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        letterSpacing: "0.03em",
-                        boxShadow: "0 4px 12px rgba(16,185,129,0.35)",
-                        width: "100%",
-                      }}
-                    >
-                      🔗 Join Meeting
-                    </button>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -490,7 +546,12 @@ export default function MDDashboard() {
               }}>{waitingCitizens.length} in queue</span>
             </div>
 
-            {waitingCitizens.length === 0 ? (
+            {appointments.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "32px 0", color: "#9CA3AF" }}>
+                <div style={{ fontSize: 36, marginBottom: 10 }}>📋</div>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>No appointments scheduled today.</p>
+              </div>
+            ) : waitingCitizens.length === 0 ? (
               <div style={{ textAlign: "center", padding: "32px 0", color: "#9CA3AF" }}>
                 <div style={{ fontSize: 36, marginBottom: 10 }}>🎉</div>
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>No waiting citizens</p>
