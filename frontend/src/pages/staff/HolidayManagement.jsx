@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../../lib/supabase";
+import { useRealtime } from "../../hooks/useRealtime";
 
 const EMPTY_FORM = { name: "", date: "", type: "Full Day", category: "National" };
 
@@ -12,10 +13,8 @@ const CATEGORY_COLORS = {
 
 function formatDate(dateStr) {
   if (!dateStr) return "";
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+  return new Date(dateStr).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
 }
-
 function getDayName(dateStr) {
   if (!dateStr) return "";
   return new Date(dateStr).toLocaleDateString("en-IN", { weekday: "long" });
@@ -30,26 +29,20 @@ export default function HolidayManagement() {
   const [filterType, setFilterType] = useState("All");
   const [loading, setLoading]       = useState(false);
 
-  // ── Fetch ────────────────────────────────────────────────────────────────
-  useEffect(() => { fetchHolidays(); }, []);
-
-  const fetchHolidays = async () => {
+  const fetchHolidays = useCallback(async () => {
     const { data, error } = await supabase
       .from("holidays")
       .select("*")
       .order("holiday_date", { ascending: true });
     if (error) { console.log(error); return; }
-    // Normalize DB shape → local shape
-    setHolidays((data ?? []).map(h => ({
-      id:       h.id,
-      name:     h.holiday_name,
-      date:     h.holiday_date,
-      type:     h.holiday_type,
-      category: h.category,
-    })));
-  };
+    setHolidays((data ?? []).map(h => ({ id: h.id, name: h.holiday_name, date: h.holiday_date, type: h.holiday_type, category: h.category })));
+  }, []);
 
-  // ── Form helpers ─────────────────────────────────────────────────────────
+  useEffect(() => { fetchHolidays(); }, [fetchHolidays]);
+
+  // ── Realtime ──────────────────────────────────────────────────────────────
+  useRealtime("holidays", fetchHolidays);
+
   const handleChange = e => {
     setForm({ ...form, [e.target.name]: e.target.value });
     setErrors({ ...errors, [e.target.name]: "" });
@@ -62,97 +55,54 @@ export default function HolidayManagement() {
     return e;
   };
 
-  const openAdd = () => {
-    setForm(EMPTY_FORM);
-    setEditId(null);
-    setErrors({});
-    setShowForm(true);
-  };
+  const openAdd  = () => { setForm(EMPTY_FORM); setEditId(null); setErrors({}); setShowForm(true); };
+  const openEdit = (h) => { setForm({ name: h.name, date: h.date, type: h.type, category: h.category }); setEditId(h.id); setErrors({}); setShowForm(true); };
+  const closeForm = () => { setShowForm(false); setEditId(null); setForm(EMPTY_FORM); setErrors({}); };
 
-  const openEdit = (h) => {
-    setForm({ name: h.name, date: h.date, type: h.type, category: h.category });
-    setEditId(h.id);
-    setErrors({});
-    setShowForm(true);
-  };
-
-  const closeForm = () => {
-    setShowForm(false);
-    setEditId(null);
-    setForm(EMPTY_FORM);
-    setErrors({});
-  };
-
-  // ── Save (Insert or Update) ───────────────────────────────────────────────
   const handleSave = async () => {
     const e = validate();
     if (Object.keys(e).length > 0) { setErrors(e); return; }
     setLoading(true);
-
-    const payload = {
-      holiday_name: form.name.trim(),
-      holiday_date: form.date,
-      holiday_type: form.type,
-      category:     form.category,
-    };
-
+    const payload = { holiday_name: form.name.trim(), holiday_date: form.date, holiday_type: form.type, category: form.category };
     if (editId) {
-      const { error } = await supabase
-        .from("holidays")
-        .update(payload)
-        .eq("id", editId);
+      const { error } = await supabase.from("holidays").update(payload).eq("id", editId);
       if (error) { console.log(error); setLoading(false); return; }
     } else {
-      const { error } = await supabase
-        .from("holidays")
-        .insert([payload]);
+      const { error } = await supabase.from("holidays").insert([payload]);
       if (error) { console.log(error); setLoading(false); return; }
     }
-
     setLoading(false);
     closeForm();
-    fetchHolidays();
   };
 
-  // ── Delete ───────────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
-    const { error } = await supabase
-      .from("holidays")
-      .delete()
-      .eq("id", id);
-    if (error) { console.log(error); return; }
-    fetchHolidays();
+    const { error } = await supabase.from("holidays").delete().eq("id", id);
+    if (error) { console.log(error); }
   };
 
-  // ── Derived ──────────────────────────────────────────────────────────────
-  const sorted   = [...holidays].sort((a, b) => new Date(a.date) - new Date(b.date));
-  const filtered = filterType === "All" ? sorted : sorted.filter(h => h.type === filterType);
-  const upcoming = sorted.filter(h => new Date(h.date) >= new Date());
+  const sorted      = [...holidays].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const filtered    = filterType === "All" ? sorted : sorted.filter(h => h.type === filterType);
+  const upcoming    = sorted.filter(h => new Date(h.date) >= new Date());
   const nextHoliday = upcoming[0];
 
   return (
     <div style={styles.page}>
-      {/* Header */}
       <div style={styles.pageHeader}>
         <div>
           <p style={styles.eyebrow}>STAFF PORTAL</p>
           <h1 style={styles.title}>Holiday Management</h1>
           <p style={styles.sub}>Configure office holidays and half-day schedules.</p>
         </div>
-        <button onClick={openAdd} style={styles.addBtn}>
-          + Add Holiday
-        </button>
+        <button onClick={openAdd} style={styles.addBtn}>+ Add Holiday</button>
       </div>
 
-      {/* Stats Row */}
       <div style={styles.statsRow}>
-        <StatCard label="Total Holidays" value={holidays.length}                                   icon="📅" color="#2563EB" />
+        <StatCard label="Total Holidays" value={holidays.length}                                    icon="📅" color="#2563EB" />
         <StatCard label="Full Days"       value={holidays.filter(h => h.type === "Full Day").length} icon="🔴" color="#EF4444" />
         <StatCard label="Half Days"       value={holidays.filter(h => h.type === "Half Day").length} icon="🟡" color="#F59E0B" />
-        <StatCard label="Upcoming"        value={upcoming.length}                                    icon="⏭️" color="#10B981" />
+        <StatCard label="Upcoming"        value={upcoming.length}                                     icon="⏭️" color="#10B981" />
       </div>
 
-      {/* Next Holiday Banner */}
       {nextHoliday && (
         <div style={styles.nextBanner}>
           <div style={styles.nextBannerLeft}>
@@ -169,7 +119,6 @@ export default function HolidayManagement() {
         </div>
       )}
 
-      {/* Filter */}
       <div style={styles.filterRow}>
         {["All", "Full Day", "Half Day"].map(f => (
           <button key={f} onClick={() => setFilterType(f)}
@@ -179,7 +128,6 @@ export default function HolidayManagement() {
         ))}
       </div>
 
-      {/* Holiday Cards Grid */}
       <div style={styles.cardsGrid}>
         {filtered.map(h => {
           const catStyle = CATEGORY_COLORS[h.category] || { bg: "#F1F5F9", color: "#64748B" };
@@ -207,7 +155,6 @@ export default function HolidayManagement() {
             </div>
           );
         })}
-
         {filtered.length === 0 && (
           <div style={styles.emptyState}>
             <span style={{ fontSize: "36px" }}>📅</span>
@@ -216,7 +163,6 @@ export default function HolidayManagement() {
         )}
       </div>
 
-      {/* Form Modal */}
       {showForm && (
         <div style={styles.overlay} onClick={e => { if (e.target === e.currentTarget) closeForm(); }}>
           <div style={styles.modal}>
@@ -245,17 +191,13 @@ export default function HolidayManagement() {
               </FieldWrap>
               <FieldWrap label="Category">
                 <select name="category" value={form.category} onChange={handleChange} style={styles.input}>
-                  <option>National</option>
-                  <option>Festival</option>
-                  <option>Regional</option>
-                  <option>Office</option>
+                  <option>National</option><option>Festival</option><option>Regional</option><option>Office</option>
                 </select>
               </FieldWrap>
             </div>
             <div style={styles.modalFooter}>
               <button onClick={closeForm} style={styles.cancelBtn}>Cancel</button>
-              <button onClick={handleSave} disabled={loading}
-                style={{ ...styles.saveBtn, opacity: loading ? 0.8 : 1 }}>
+              <button onClick={handleSave} disabled={loading} style={{ ...styles.saveBtn, opacity: loading ? 0.8 : 1 }}>
                 {loading ? "Saving..." : editId ? "Save Changes" : "Add Holiday"}
               </button>
             </div>
@@ -266,33 +208,17 @@ export default function HolidayManagement() {
   );
 }
 
-// ── Shared utility exported for CitizenBooking, WalkIn, ExecutiveMeetings ────
-// Usage in other pages:
-//   import { isOfficeClosedOn } from "./HolidayManagement";
-//   const closed = await isOfficeClosedOn("2026-08-15");
-//   → { closed: true, reason: "Independence Day" }  |  { closed: false }
 export async function isOfficeClosedOn(dateStr) {
   if (!dateStr) return { closed: false };
-
-  const d   = new Date(dateStr);
-  const day = d.getDay(); // 0=Sun, 6=Sat
-
+  const d = new Date(dateStr); const day = d.getDay();
   if (day === 0) return { closed: true, reason: "Sunday – Office Closed" };
   if (day === 6) return { closed: true, reason: "Saturday – Office Closed" };
-
-  const { data, error } = await supabase
-    .from("holidays")
-    .select("holiday_name")
-    .eq("holiday_date", dateStr)
-    .limit(1);
-
+  const { data, error } = await supabase.from("holidays").select("holiday_name").eq("holiday_date", dateStr).limit(1);
   if (error) { console.log(error); return { closed: false }; }
   if (data && data.length > 0) return { closed: true, reason: data[0].holiday_name };
-
   return { closed: false };
 }
 
-// ── Sub-components ───────────────────────────────────────────────────────────
 function StatCard({ label, value, icon, color }) {
   return (
     <div style={{ background: "#fff", borderRadius: "14px", padding: "20px 24px", flex: 1, minWidth: "130px", boxShadow: "0 1px 3px rgba(0,0,0,0.06)", borderTop: `4px solid ${color}` }}>
@@ -318,49 +244,49 @@ function FieldWrap({ label, error, required, children }) {
 }
 
 const styles = {
-  page:           { padding: "36px 40px", background: "#F8FAFC", minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif" },
-  pageHeader:     { display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "24px", flexWrap: "wrap", gap: "16px" },
-  eyebrow:        { margin: "0 0 6px", fontSize: "11px", fontWeight: "700", letterSpacing: "2px", color: "#2563EB" },
-  title:          { margin: "0 0 4px", fontSize: "28px", fontWeight: "800", color: "#111827" },
-  sub:            { margin: 0, fontSize: "14px", color: "#64748B" },
-  addBtn:         { background: "linear-gradient(135deg,#2563EB,#1d4ed8)", color: "#fff", border: "none", padding: "12px 20px", borderRadius: "12px", fontWeight: "700", fontSize: "14px", cursor: "pointer" },
-  statsRow:       { display: "flex", gap: "16px", marginBottom: "20px", flexWrap: "wrap" },
-  nextBanner:     { display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(135deg,#1E3A8A,#2563EB)", borderRadius: "16px", padding: "20px 28px", marginBottom: "24px", flexWrap: "wrap", gap: "12px" },
+  page: { padding: "36px 40px", background: "#F8FAFC", minHeight: "100vh", fontFamily: "'Segoe UI', system-ui, sans-serif" },
+  pageHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "24px", flexWrap: "wrap", gap: "16px" },
+  eyebrow: { margin: "0 0 6px", fontSize: "11px", fontWeight: "700", letterSpacing: "2px", color: "#2563EB" },
+  title: { margin: "0 0 4px", fontSize: "28px", fontWeight: "800", color: "#111827" },
+  sub: { margin: 0, fontSize: "14px", color: "#64748B" },
+  addBtn: { background: "linear-gradient(135deg,#2563EB,#1d4ed8)", color: "#fff", border: "none", padding: "12px 20px", borderRadius: "12px", fontWeight: "700", fontSize: "14px", cursor: "pointer" },
+  statsRow: { display: "flex", gap: "16px", marginBottom: "20px", flexWrap: "wrap" },
+  nextBanner: { display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(135deg,#1E3A8A,#2563EB)", borderRadius: "16px", padding: "20px 28px", marginBottom: "24px", flexWrap: "wrap", gap: "12px" },
   nextBannerLeft: { display: "flex", gap: "16px", alignItems: "center" },
   nextBannerIcon: { fontSize: "32px" },
-  nextBannerLabel:{ margin: "0 0 4px", fontSize: "10px", fontWeight: "700", letterSpacing: "2px", color: "rgba(255,255,255,0.6)" },
+  nextBannerLabel: { margin: "0 0 4px", fontSize: "10px", fontWeight: "700", letterSpacing: "2px", color: "rgba(255,255,255,0.6)" },
   nextBannerName: { margin: "0 0 2px", fontSize: "18px", fontWeight: "800", color: "#fff" },
   nextBannerDate: { margin: 0, fontSize: "13px", color: "rgba(255,255,255,0.75)" },
-  filterRow:      { display: "flex", gap: "8px", marginBottom: "20px" },
-  filterBtn:      { padding: "8px 18px", borderRadius: "20px", border: "1.5px solid", fontSize: "13px", fontWeight: "600", cursor: "pointer" },
-  cardsGrid:      { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" },
-  holidayCard:    { background: "#fff", borderRadius: "14px", boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04)", overflow: "hidden", display: "flex" },
-  cardDateStrip:  { width: "70px", background: "linear-gradient(160deg,#1E3A8A,#2563EB)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "16px 8px", flexShrink: 0 },
-  cardDay:        { color: "#fff", fontSize: "26px", fontWeight: "900", lineHeight: 1 },
-  cardMonth:      { color: "rgba(255,255,255,0.75)", fontSize: "12px", fontWeight: "700", textTransform: "uppercase" },
-  cardYear:       { color: "rgba(255,255,255,0.5)", fontSize: "10px", marginTop: "2px" },
-  cardBody:       { flex: 1, padding: "16px 18px" },
-  cardTop:        { display: "flex", gap: "8px", alignItems: "center", marginBottom: "8px", flexWrap: "wrap" },
-  catBadge:       { fontSize: "11px", fontWeight: "700", padding: "3px 9px", borderRadius: "20px" },
-  typePill:       { fontSize: "11px", fontWeight: "700", padding: "3px 9px", borderRadius: "20px" },
-  fullDayPill:    { background: "#FEF2F2", color: "#DC2626" },
-  halfDayPill:    { background: "#FEF3C7", color: "#D97706" },
-  cardName:       { margin: "0 0 3px", fontSize: "15px", fontWeight: "700", color: "#111827" },
-  cardDateText:   { margin: "0 0 8px", fontSize: "12px", color: "#94A3B8" },
-  pastBadge:      { display: "inline-block", background: "#F1F5F9", color: "#94A3B8", fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "10px", marginBottom: "8px" },
-  cardActions:    { display: "flex", gap: "8px" },
-  editBtn:        { background: "#F8FAFC", color: "#374151", border: "1px solid #E2E8F0", padding: "6px 12px", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
-  deleteBtn:      { background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", padding: "6px 12px", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
-  emptyState:     { gridColumn: "1/-1", textAlign: "center", padding: "60px 0" },
-  overlay:        { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" },
-  modal:          { background: "#fff", borderRadius: "20px", width: "100%", maxWidth: "480px", overflow: "hidden" },
-  modalHeader:    { padding: "24px 28px 16px", borderBottom: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center" },
-  modalTitle:     { margin: 0, fontSize: "20px", fontWeight: "700", color: "#111827" },
-  closeBtn:       { background: "#F1F5F9", border: "none", borderRadius: "8px", padding: "6px 10px", cursor: "pointer", fontSize: "14px", color: "#64748B" },
-  modalBody:      { padding: "24px 28px" },
-  modalFooter:    { padding: "16px 28px 24px", borderTop: "1px solid #F1F5F9", display: "flex", justifyContent: "flex-end", gap: "12px" },
-  input:          { width: "100%", padding: "11px 14px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "14px", background: "#F8FAFC", color: "#111827", outline: "none", boxSizing: "border-box" },
-  typeToggle:     { flex: 1, padding: "10px", borderRadius: "10px", cursor: "pointer", fontSize: "13px", fontWeight: "600" },
-  cancelBtn:      { background: "#F1F5F9", color: "#374151", border: "none", padding: "12px 20px", borderRadius: "10px", cursor: "pointer", fontWeight: "600", fontSize: "14px" },
-  saveBtn:        { background: "linear-gradient(135deg,#2563EB,#1d4ed8)", color: "#fff", border: "none", padding: "12px 24px", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "14px" },
+  filterRow: { display: "flex", gap: "8px", marginBottom: "20px" },
+  filterBtn: { padding: "8px 18px", borderRadius: "20px", border: "1.5px solid", fontSize: "13px", fontWeight: "600", cursor: "pointer" },
+  cardsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px" },
+  holidayCard: { background: "#fff", borderRadius: "14px", boxShadow: "0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04)", overflow: "hidden", display: "flex" },
+  cardDateStrip: { width: "70px", background: "linear-gradient(160deg,#1E3A8A,#2563EB)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "16px 8px", flexShrink: 0 },
+  cardDay: { color: "#fff", fontSize: "26px", fontWeight: "900", lineHeight: 1 },
+  cardMonth: { color: "rgba(255,255,255,0.75)", fontSize: "12px", fontWeight: "700", textTransform: "uppercase" },
+  cardYear: { color: "rgba(255,255,255,0.5)", fontSize: "10px", marginTop: "2px" },
+  cardBody: { flex: 1, padding: "16px 18px" },
+  cardTop: { display: "flex", gap: "8px", alignItems: "center", marginBottom: "8px", flexWrap: "wrap" },
+  catBadge: { fontSize: "11px", fontWeight: "700", padding: "3px 9px", borderRadius: "20px" },
+  typePill: { fontSize: "11px", fontWeight: "700", padding: "3px 9px", borderRadius: "20px" },
+  fullDayPill: { background: "#FEF2F2", color: "#DC2626" },
+  halfDayPill: { background: "#FEF3C7", color: "#D97706" },
+  cardName: { margin: "0 0 3px", fontSize: "15px", fontWeight: "700", color: "#111827" },
+  cardDateText: { margin: "0 0 8px", fontSize: "12px", color: "#94A3B8" },
+  pastBadge: { display: "inline-block", background: "#F1F5F9", color: "#94A3B8", fontSize: "10px", fontWeight: "700", padding: "2px 8px", borderRadius: "10px", marginBottom: "8px" },
+  cardActions: { display: "flex", gap: "8px" },
+  editBtn: { background: "#F8FAFC", color: "#374151", border: "1px solid #E2E8F0", padding: "6px 12px", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
+  deleteBtn: { background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", padding: "6px 12px", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600" },
+  emptyState: { gridColumn: "1/-1", textAlign: "center", padding: "60px 0" },
+  overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" },
+  modal: { background: "#fff", borderRadius: "20px", width: "100%", maxWidth: "480px", overflow: "hidden" },
+  modalHeader: { padding: "24px 28px 16px", borderBottom: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center" },
+  modalTitle: { margin: 0, fontSize: "20px", fontWeight: "700", color: "#111827" },
+  closeBtn: { background: "#F1F5F9", border: "none", borderRadius: "8px", padding: "6px 10px", cursor: "pointer", fontSize: "14px", color: "#64748B" },
+  modalBody: { padding: "24px 28px" },
+  modalFooter: { padding: "16px 28px 24px", borderTop: "1px solid #F1F5F9", display: "flex", justifyContent: "flex-end", gap: "12px" },
+  input: { width: "100%", padding: "11px 14px", border: "1.5px solid #E2E8F0", borderRadius: "10px", fontSize: "14px", background: "#F8FAFC", color: "#111827", outline: "none", boxSizing: "border-box" },
+  typeToggle: { flex: 1, padding: "10px", borderRadius: "10px", cursor: "pointer", fontSize: "13px", fontWeight: "600" },
+  cancelBtn: { background: "#F1F5F9", color: "#374151", border: "none", padding: "12px 20px", borderRadius: "10px", cursor: "pointer", fontWeight: "600", fontSize: "14px" },
+  saveBtn: { background: "linear-gradient(135deg,#2563EB,#1d4ed8)", color: "#fff", border: "none", padding: "12px 24px", borderRadius: "10px", cursor: "pointer", fontWeight: "700", fontSize: "14px" },
 };
