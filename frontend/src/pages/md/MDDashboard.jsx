@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import tribalLogo from "../../assets/tribal-logo.jpg";
 import { supabase } from "../../lib/supabase";
+import { useRealtime } from "../../hooks/useRealtime";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -837,6 +838,9 @@ export default function MDDashboard() {
     const interval = setInterval(fetchAll, 30000);
     return () => clearInterval(interval);
   }, [fetchAll]);
+
+  // ── Realtime: instant push on any change — no polling needed ──
+  useRealtime({ appointments: fetchAll, executive_meetings: fetchAll, tour_diary: fetchAll });
 
   useEffect(() => {
     const t = setInterval(() => setGreeting(getDynamicGreeting()), 60000);
