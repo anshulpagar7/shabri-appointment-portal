@@ -11,9 +11,6 @@ export default function Reports() {
     fetchMeetings();
   }, [fetchAppointments, fetchMeetings]);
 
-  // ── Realtime subscriptions ────────────────────────────────────────────────
-  useRealtime({ appointments: fetchAppointments, executive_meetings: fetchMeetings });
-
   const fetchAppointments = useCallback(async () => {
     const { data, error } = await supabase
       .from("appointments")
@@ -32,6 +29,9 @@ export default function Reports() {
     setMeetings(data ?? []);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Realtime subscriptions ────────────────────────────────────────────────
+  useRealtime({ appointments: fetchAppointments, executive_meetings: fetchMeetings });
 
   // ── KPI calculations ──────────────────────────────────────────────────────
   const total        = appointments.length;
