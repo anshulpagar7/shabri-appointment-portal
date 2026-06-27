@@ -803,14 +803,23 @@ export default function MDDashboard() {
     setTimelineLoading(false);
   }, []);
 
+  // Stable ref to fetchTimeline so the effect below never re-runs due to
+  // callback identity changes — only re-runs when timelineDate actually changes
+  const fetchTimelineRef = useRef(fetchTimeline);
+  useEffect(() => { fetchTimelineRef.current = fetchTimeline; }, [fetchTimeline]);
+
+  // Track whether page has mounted yet — used to suppress auto-scroll on load
+  const hasMountedRef = useRef(false);
+
   // ── Effect: fetch timeline whenever the selected date changes ─────────────
   useEffect(() => {
-    fetchTimeline(timelineDate);
-    // Scroll timeline into view smoothly on date change
-    if (timelineRef.current) {
+    fetchTimelineRef.current(timelineDate);
+    // Only scroll when user navigates (not on initial page load)
+    if (hasMountedRef.current && timelineRef.current) {
       timelineRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, [timelineDate, fetchTimeline]);
+    hasMountedRef.current = true;
+  }, [timelineDate]); // deliberately omit fetchTimeline — use ref above
 
   // ── Effect: when today's data refreshes AND timeline is showing today,
   //    sync it — but DO NOT touch timeline if viewing a different date ────────
@@ -893,8 +902,9 @@ export default function MDDashboard() {
   };
 
   // ── Date navigation helpers ───────────────────────────────────────────────
-  const isOnToday   = timelineDate === today;
-  const isNextDisabled = isOnToday; // never allow going beyond today
+  // Recompute today fresh each call so it's never stale
+  const isOnToday      = timelineDate === today;
+  const isNextDisabled = timelineDate >= today; // >= guards same-day and any future edge case
 
   function handlePrevDay() {
     const d = new Date(timelineDate + "T00:00:00");
@@ -903,12 +913,12 @@ export default function MDDashboard() {
   }
 
   function handleNextDay() {
-    if (isNextDisabled) return;
+    const currentToday = getTodayLocalDate(); // fresh, not from closure
+    if (timelineDate >= currentToday) return;  // hard block
     const d = new Date(timelineDate + "T00:00:00");
     d.setDate(d.getDate() + 1);
     const next = d.toISOString().split("T")[0];
-    // Safety: clamp to today
-    setTimelineDate(next > today ? today : next);
+    setTimelineDate(next >= currentToday ? currentToday : next);
   }
 
   function handleDatePick(e) {
@@ -965,7 +975,7 @@ export default function MDDashboard() {
         .join-btn { transition: filter 0.15s, transform 0.15s; }
         .citizen-row:hover { background: #EFF6FF !important; }
         .citizen-row { transition: background 0.15s; }
-        .tl-nav-btn { background: #F1F5F9; border: 1.5px solid #E2E8F0; border-radius: 10px; padding: 8px 13px; cursor: pointer; fontSize: 14px; font-weight: 700; color: #374151; line-height: 1; transition: background 0.15s, opacity 0.15s; }
+        .tl-nav-btn { background: #F1F5F9; border: 1.5px solid #E2E8F0; border-radius: 10px; padding: 8px 13px; cursor: pointer; font-size: 14px; font-weight: 700; color: #374151; line-height: 1; transition: background 0.15s, opacity 0.15s; }
         .tl-nav-btn:hover:not(:disabled) { background: #E2E8F0; }
         .tl-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
       `}</style>
