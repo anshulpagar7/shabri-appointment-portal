@@ -803,23 +803,25 @@ export default function MDDashboard() {
     setTimelineLoading(false);
   }, []);
 
-  // Stable ref to fetchTimeline so the effect below never re-runs due to
-  // callback identity changes — only re-runs when timelineDate actually changes
-  const fetchTimelineRef = useRef(fetchTimeline);
-  useEffect(() => { fetchTimelineRef.current = fetchTimeline; }, [fetchTimeline]);
-
-  // Track whether page has mounted yet — used to suppress auto-scroll on load
-  const hasMountedRef = useRef(false);
-
   // ── Effect: fetch timeline whenever the selected date changes ─────────────
+  // NOTE: We deliberately do NOT scroll here — scrolling is handled separately below
   useEffect(() => {
-    fetchTimelineRef.current(timelineDate);
-    // Only scroll when user navigates (not on initial page load)
-    if (hasMountedRef.current && timelineRef.current) {
-      timelineRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    fetchTimeline(timelineDate);
+  }, [timelineDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Effect: scroll to timeline ONLY when user changes the date ───────────
+  // We track the previous date value; if it's the same as on mount, skip scroll
+  const prevDateRef = useRef(timelineDate);
+  useEffect(() => {
+    if (prevDateRef.current !== timelineDate) {
+      prevDateRef.current = timelineDate;
+      if (timelineRef.current) {
+        setTimeout(() => {
+          timelineRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 100);
+      }
     }
-    hasMountedRef.current = true;
-  }, [timelineDate]); // deliberately omit fetchTimeline — use ref above
+  }, [timelineDate]);
 
   // ── Effect: when today's data refreshes AND timeline is showing today,
   //    sync it — but DO NOT touch timeline if viewing a different date ────────
@@ -1183,9 +1185,9 @@ export default function MDDashboard() {
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {/* ◀ Previous — always enabled */}
               <button
-                className="tl-nav-btn"
                 onClick={handlePrevDay}
                 title="Previous day"
+                style={{ background: "#F1F5F9", border: "1.5px solid #E2E8F0", borderRadius: 10, padding: "8px 13px", cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#374151", lineHeight: 1 }}
               >◀</button>
 
               {/* Date display + hidden picker */}
@@ -1208,10 +1210,22 @@ export default function MDDashboard() {
 
               {/* ▶ Next — disabled when on today */}
               <button
-                className="tl-nav-btn"
                 onClick={handleNextDay}
                 disabled={isNextDisabled}
                 title={isNextDisabled ? "Cannot navigate beyond today" : "Next day"}
+                style={{
+                  background: "#F1F5F9",
+                  border: "1.5px solid #E2E8F0",
+                  borderRadius: 10,
+                  padding: "8px 13px",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  color: isNextDisabled ? "#C0C8D4" : "#374151",
+                  lineHeight: 1,
+                  cursor: isNextDisabled ? "not-allowed" : "pointer",
+                  opacity: isNextDisabled ? 0.4 : 1,
+                  pointerEvents: isNextDisabled ? "none" : "auto",
+                }}
               >▶</button>
 
               {/* Back to Today pill — only when not on today */}
