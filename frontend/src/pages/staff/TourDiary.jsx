@@ -51,7 +51,6 @@ const STATUS_CONFIG = {
 const STATUS_OPTIONS = ["Upcoming", "Ongoing", "Completed", "Cancelled"];
 
 const EMPTY_FORM = {
-  title:       "",
   destination: "",
   purpose:     "",
   start_date:  "",
@@ -219,8 +218,7 @@ export default function TourDiary() {
       const q          = search.toLowerCase();
       const matchSearch = !q ||
         (t.destination || "").toLowerCase().includes(q) ||
-        (t.purpose     || "").toLowerCase().includes(q) ||
-        (t.title       || "").toLowerCase().includes(q);
+        (t.purpose     || "").toLowerCase().includes(q);
       const matchYear   = filterYear   === "All" || (t.start_date || "").startsWith(filterYear);
       const monthIdx    = MONTHS.indexOf(filterMonth);
       const matchMonth  = filterMonth  === "All" || (t.start_date || "").slice(5,7) === String(monthIdx).padStart(2,"0");
@@ -258,7 +256,6 @@ export default function TourDiary() {
     const autoStatus = computeStatus(form.start_date, form.end_date, form.status);
 
     const payload = {
-      title:       form.title.trim()       || null,
       destination: form.destination.trim(),
       purpose:     form.purpose.trim(),
       start_date:  form.start_date,
@@ -283,7 +280,6 @@ export default function TourDiary() {
 
   const handleEdit = (t) => {
     setForm({
-      title:       t.title       || "",
       destination: t.destination || "",
       purpose:     t.purpose     || "",
       start_date:  t.start_date  || "",
@@ -357,7 +353,7 @@ export default function TourDiary() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search destination, purpose or title…"
+            placeholder="Search destination or purpose…"
             style={styles.searchInput}
           />
           {search && <button onClick={() => setSearch("")} style={styles.clearBtn}>✕</button>}
@@ -444,12 +440,6 @@ export default function TourDiary() {
                           {statusEmoji} {computedStatus}
                         </span>
                       </div>
-                      {/* Title (if set) */}
-                      {t.title && (
-                        <p style={{ margin:"0 0 2px", fontSize:12, fontWeight:600, color:"#2563EB", textTransform:"uppercase", letterSpacing:"0.06em" }}>
-                          {t.title}
-                        </p>
-                      )}
                       <h3 style={styles.destination}>📍 {t.destination}</h3>
                       <p style={styles.purpose}>{t.purpose}</p>
                     </div>
@@ -504,15 +494,6 @@ export default function TourDiary() {
 
             <div style={styles.modalBody}>
               <div style={styles.formGrid}>
-
-                {/* Tour Title (optional) */}
-                <FormField label="Tour Title" span={2}>
-                  <input
-                    name="title" value={form.title} onChange={handleChange}
-                    placeholder="e.g. Tribal Welfare Inspection Visit (optional)"
-                    style={styles.input}
-                  />
-                </FormField>
 
                 {/* Destination */}
                 <FormField label="Destination" required error={errors.destination} span={2}>
