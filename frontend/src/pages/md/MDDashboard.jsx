@@ -93,7 +93,6 @@ function Popup({ data, onComplete, onClose }) {
   const isBreak   = data.type === "break";
   const isMeeting = data.type === "meeting";
 
-  // Colour scheme per type
   const accentColor = isBreak ? "#F59E0B" : isMeeting ? "#7C3AED" : "#2563EB";
   const typeLabel   = isBreak ? "☕ Break Time"
     : isMeeting ? "📅 Executive Meeting Starting Soon"
@@ -105,11 +104,9 @@ function Popup({ data, onComplete, onClose }) {
   return (
     <div style={popupStyles.overlay}>
       <div style={{ ...popupStyles.box, borderTop: `5px solid ${accentColor}` }}>
-        {/* Countdown progress bar */}
         <div style={popupStyles.progressTrack}>
           <div style={{ ...popupStyles.progressFill, width: `${(seconds / 30) * 100}%`, background: accentColor }} />
         </div>
-
         <div style={{ padding: "24px 28px 20px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
             <div>
@@ -123,7 +120,6 @@ function Popup({ data, onComplete, onClose }) {
             </span>
           </div>
 
-          {/* ── Meeting popup body ── */}
           {isMeeting && (
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 4 }}>
               <div style={{ background: "linear-gradient(135deg,#F5F3FF,#EDE9FE)", border: "1px solid #DDD6FE", borderRadius: 12, padding: "16px 18px", marginBottom: 4 }}>
@@ -134,8 +130,6 @@ function Popup({ data, onComplete, onClose }) {
                   {data.notes && <InfoRow icon="📝" label="Notes" value={data.notes} />}
                 </div>
               </div>
-
-              {/* Join button — prominent green CTA */}
               {isMeetLinkValid(data.meet_link) ? (
                 <a
                   href={data.meet_link}
@@ -161,7 +155,6 @@ function Popup({ data, onComplete, onClose }) {
             </div>
           )}
 
-          {/* ── Break popup body ── */}
           {isBreak && (
             <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 12, padding: "14px 18px" }}>
               <p style={{ margin: "0 0 6px", fontSize: 13, color: "#92400E", lineHeight: 1.6 }}>
@@ -175,7 +168,6 @@ function Popup({ data, onComplete, onClose }) {
             </div>
           )}
 
-          {/* ── Appointment completed popup body ── */}
           {!isBreak && !isMeeting && (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <InfoRow icon="📋" label="Purpose"        value={data.purpose} />
@@ -211,18 +203,18 @@ function InfoRow({ icon, label, value }) {
 }
 
 const popupStyles = {
-  overlay: { position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 },
-  box:     { background: "#fff", borderRadius: 20, width: "100%", maxWidth: 460, boxShadow: "0 24px 64px rgba(0,0,0,0.25)", overflow: "hidden" },
-  progressTrack: { height: 4, background: "#F3F4F6", width: "100%" },
-  progressFill:  { height: "100%", transition: "width 1s linear", borderRadius: 2 },
-  completeBtn: { flex: 1, padding: "12px 16px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#059669,#10B981)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(16,185,129,0.3)" },
-  closeBtn:    { padding: "12px 16px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#374151", fontSize: 14, fontWeight: 600, cursor: "pointer" },
+  overlay:      { position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 },
+  box:          { background: "#fff", borderRadius: 20, width: "100%", maxWidth: 460, boxShadow: "0 24px 64px rgba(0,0,0,0.25)", overflow: "hidden" },
+  progressTrack:{ height: 4, background: "#F3F4F6", width: "100%" },
+  progressFill: { height: "100%", transition: "width 1s linear", borderRadius: 2 },
+  completeBtn:  { flex: 1, padding: "12px 16px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#059669,#10B981)", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(16,185,129,0.3)" },
+  closeBtn:     { padding: "12px 16px", borderRadius: 12, border: "1.5px solid #E5E7EB", background: "#fff", color: "#374151", fontSize: 14, fontWeight: 600, cursor: "pointer" },
 };
 
 // ─── Timeline Section ─────────────────────────────────────────────────────────
 
 function TodayTimeline({ appointments, meetings, isToday = true }) {
-  const now = isToday ? nowMinutes() : -1; // -1 means nothing is "past" on future/past dates
+  const now = isToday ? nowMinutes() : -1;
   const events = [];
 
   appointments.forEach(a => {
@@ -243,12 +235,7 @@ function TodayTimeline({ appointments, meetings, isToday = true }) {
   events.sort((a, b) => a.minutes - b.minutes);
 
   if (events.length === 0) {
-    return (
-      <div style={{ textAlign: "center", padding: "32px 0", color: "#9CA3AF" }}>
-        <div style={{ fontSize: 36, marginBottom: 10 }}>📅</div>
-        <p style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>No events scheduled today</p>
-      </div>
-    );
+    return null; // handled by parent empty state
   }
 
   const typeConfig = {
@@ -304,8 +291,6 @@ function TodayTimeline({ appointments, meetings, isToday = true }) {
 
 // ─── Tour Diary Print ─────────────────────────────────────────────────────────
 
-const TRIBAL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAB4AG0DASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDsKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/2Q==";
-
 function printTourDiaryMD(tours) {
   const statusColor = { Upcoming: "#D97706", Completed: "#059669", Ongoing: "#2563EB", Cancelled: "#DC2626" };
 
@@ -347,48 +332,54 @@ function printTourDiaryMD(tours) {
       <title>Tour Diary — Leena Bansod, MD</title>
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Arial, sans-serif; padding: 32px; color: #111; background: #fff; }
-        .gov-header { display: flex; align-items: center; gap: 20px; padding-bottom: 18px; margin-bottom: 6px; border-bottom: 3px solid #6B1A1A; }
-        .logos { display: flex; align-items: center; gap: 10px; }
-        .logo-img { width: 64px; height: 64px; object-fit: contain; border-radius: 8px; }
-        .logo-div { width: 1px; height: 44px; background: #D1D5DB; }
-        .gov-title { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: #6B1A1A; text-transform: uppercase; margin-bottom: 3px; }
-        .gov-org { font-size: 15px; font-weight: 800; color: #111; margin-bottom: 3px; }
+        body { font-family: Arial, sans-serif; padding: 28px; color: #111; background: #fff; font-size: 12px; }
+        .gov-header {
+          text-align: center;
+          padding-bottom: 16px;
+          margin-bottom: 20px;
+          border-bottom: 3px solid #6B1A1A;
+        }
+        .gov-org {
+          font-size: 17px;
+          font-weight: 900;
+          color: #6B1A1A;
+          margin-bottom: 4px;
+          letter-spacing: 0.3px;
+        }
+        .gov-system { font-size: 13px; font-weight: 700; color: #111; margin-bottom: 3px; }
         .gov-sub { font-size: 11px; color: #64748B; }
-        .report-title { font-size: 22px; font-weight: 900; color: #111; margin: 18px 0 4px; }
-        .report-sub { font-size: 13px; color: #64748B; margin-bottom: 20px; }
-        .stats-row { display: flex; gap: 16px; margin-bottom: 24px; }
-        .stat-box { flex: 1; border: 1.5px solid #E5E7EB; border-radius: 10px; padding: 14px 18px; }
+        .report-title { font-size: 20px; font-weight: 900; color: #111; margin: 0 0 4px; }
+        .report-sub { font-size: 12px; color: #64748B; margin-bottom: 20px; }
+        .stats-row { display: flex; gap: 14px; margin-bottom: 22px; }
+        .stat-box { flex: 1; border: 1.5px solid #E5E7EB; border-top: 3px solid #6B1A1A; border-radius: 10px; padding: 14px 18px; }
         .stat-box .num { font-size: 28px; font-weight: 900; color: #6B1A1A; }
-        .stat-box .lbl { font-size: 11px; color: #64748B; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+        .stat-box .lbl { font-size: 10px; color: #64748B; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
         .tour-card { border: 1.5px solid #E5E7EB; border-radius: 12px; padding: 16px 20px; page-break-inside: avoid; }
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-        .destination { font-size: 15px; font-weight: 800; color: #111; margin-bottom: 3px; }
-        .purpose { font-size: 12px; color: #64748B; }
-        .status-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; border: 1px solid; white-space: nowrap; flex-shrink: 0; margin-left: 10px; }
-        .card-meta { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }
-        .meta-item { font-size: 12px; color: #374151; display: flex; align-items: center; gap: 5px; }
-        .meta-icon { font-size: 13px; }
-        .remarks { font-size: 11px; color: #6B7280; font-style: italic; background: #F8FAFC; padding: 8px 12px; border-radius: 8px; margin-top: 8px; }
-        .footer { font-size: 10px; color: #9CA3AF; border-top: 1px solid #E5E7EB; padding-top: 12px; text-align: center; margin-top: 28px; }
+        .destination { font-size: 14px; font-weight: 800; color: #111; margin-bottom: 3px; }
+        .purpose { font-size: 11px; color: #64748B; }
+        .status-badge { font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 99px; border: 1px solid; white-space: nowrap; flex-shrink: 0; margin-left: 10px; }
+        .card-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+        .meta-item { font-size: 11px; color: #374151; display: flex; align-items: center; gap: 4px; }
+        .meta-icon { font-size: 12px; }
+        .remarks { font-size: 11px; color: #6B7280; font-style: italic; background: #F8FAFC; padding: 7px 11px; border-radius: 8px; margin-top: 8px; }
+        .footer { font-size: 10px; color: #9CA3AF; border-top: 1px solid #E5E7EB; padding-top: 10px; text-align: center; margin-top: 24px; }
+        @page { margin: 18mm; }
       </style>
     </head>
     <body>
       <div class="gov-header">
-        <div class="logos">
-          <img class="logo-img" src="data:image/jpeg;base64,${TRIBAL_B64}" alt="Tribal" />
-          <div class="logo-div"></div>
-        </div>
-        <div>
-          <div class="gov-title">Government of Maharashtra</div>
-          <div class="gov-org">Maharashtra State Cooperative Tribal Development Corporation Limited</div>
-          <div class="gov-sub">Official Tour Diary — Managing Director</div>
-        </div>
+        <div class="gov-org">Maharashtra State Co-operative Tribal Development Corporation Ltd.</div>
+        <div class="gov-system">Shabri Smart Appointment Management System</div>
+        <div class="gov-sub">Official Tour Diary — Managing Director</div>
       </div>
 
       <div class="report-title">✈️ Tour Diary</div>
-      <div class="report-sub">Travel record of Leena Bansod, Managing Director &nbsp;·&nbsp; Printed: ${new Date().toLocaleDateString("en-IN", { day:"2-digit", month:"long", year:"numeric" })}</div>
+      <div class="report-sub">
+        Travel record of Leena Bansod, Managing Director &nbsp;·&nbsp;
+        Printed: ${new Date().toLocaleDateString("en-IN", { day:"2-digit", month:"long", year:"numeric" })}
+      </div>
 
       <div class="stats-row">
         <div class="stat-box"><div class="num">${tours.length}</div><div class="lbl">Total Tours</div></div>
@@ -399,7 +390,11 @@ function printTourDiaryMD(tours) {
 
       <div class="grid">${cards}</div>
 
-      <div class="footer">SHABRI Smart Appointment Portal — Official Document &nbsp;·&nbsp; Printed on ${new Date().toLocaleString("en-IN")}</div>
+      <div class="footer">
+        Shabri Smart Appointment Management System &nbsp;·&nbsp;
+        Maharashtra State Co-operative Tribal Development Corporation Ltd. &nbsp;·&nbsp;
+        Printed on ${new Date().toLocaleString("en-IN")}
+      </div>
     </body></html>`;
 
   const win = window.open("", "_blank");
@@ -456,16 +451,11 @@ function TourDiarySection({ tourDiary }) {
       <div style={{
         background: highlight ? "linear-gradient(135deg,#FFFBEB,#FEF3C7)" : "#fff",
         border: `1.5px solid ${highlight ? "#FDE68A" : "#E5E7EB"}`,
-        borderRadius: 16,
-        padding: "18px 20px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
-        position: "relative",
-        overflow: "hidden",
+        borderRadius: 16, padding: "18px 20px",
+        display: "flex", flexDirection: "column", gap: 10,
+        position: "relative", overflow: "hidden",
         boxShadow: highlight ? "0 6px 24px rgba(245,158,11,0.18)" : "0 2px 8px rgba(0,0,0,0.05)",
       }}>
-        {/* Active pulse */}
         {highlight && (
           <div style={{ position:"absolute", top:14, right:14 }}>
             <span style={{ display:"inline-flex", alignItems:"center", gap:5, background:"#D97706", color:"#fff", fontSize:10, fontWeight:800, padding:"3px 10px", borderRadius:99, letterSpacing:"0.06em" }}>
@@ -473,29 +463,17 @@ function TourDiarySection({ tourDiary }) {
             </span>
           </div>
         )}
-
-        {/* Destination */}
         <div>
           <p style={{ margin:"0 0 2px", fontSize:15, fontWeight:800, color:"#111827" }}>📍 {t.destination}</p>
           <p style={{ margin:0, fontSize:12, color:"#6B7280", lineHeight:1.5 }}>{t.purpose}</p>
         </div>
-
-        {/* Meta row */}
         <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-          <span style={{ fontSize:11, fontWeight:600, color:"#374151", background:"#F8FAFC", border:"1px solid #E5E7EB", borderRadius:8, padding:"3px 9px" }}>
-            📅 {dateLabel}
-          </span>
-          <span style={{ fontSize:11, fontWeight:600, color:"#374151", background:"#F8FAFC", border:"1px solid #E5E7EB", borderRadius:8, padding:"3px 9px" }}>
-            ⏳ {days} day{days > 1 ? "s" : ""}
-          </span>
+          <span style={{ fontSize:11, fontWeight:600, color:"#374151", background:"#F8FAFC", border:"1px solid #E5E7EB", borderRadius:8, padding:"3px 9px" }}>📅 {dateLabel}</span>
+          <span style={{ fontSize:11, fontWeight:600, color:"#374151", background:"#F8FAFC", border:"1px solid #E5E7EB", borderRadius:8, padding:"3px 9px" }}>⏳ {days} day{days > 1 ? "s" : ""}</span>
           {t.mode_of_travel && (
-            <span style={{ fontSize:11, fontWeight:600, color:"#374151", background:"#F8FAFC", border:"1px solid #E5E7EB", borderRadius:8, padding:"3px 9px" }}>
-              {t.mode_of_travel}
-            </span>
+            <span style={{ fontSize:11, fontWeight:600, color:"#374151", background:"#F8FAFC", border:"1px solid #E5E7EB", borderRadius:8, padding:"3px 9px" }}>{t.mode_of_travel}</span>
           )}
         </div>
-
-        {/* Status badge */}
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <span style={{ display:"inline-flex", alignItems:"center", gap:5, background:sc.bg, color:sc.color, border:`1px solid ${sc.border}`, fontSize:11, fontWeight:700, padding:"4px 12px", borderRadius:99 }}>
             <span style={{ width:6, height:6, borderRadius:"50%", background:sc.color, display:"inline-block" }} />
@@ -518,8 +496,6 @@ function TourDiarySection({ tourDiary }) {
 
   return (
     <div style={{ background:"#fff", borderRadius:22, padding:28, boxShadow:"0 8px 32px rgba(0,0,0,0.06)", marginBottom:28 }}>
-
-      {/* Section header */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:22 }}>
         <div>
           <p style={{ margin:0, fontSize:11, fontWeight:700, color:"#6B7280", letterSpacing:"0.08em", textTransform:"uppercase" }}>Personal Record</p>
@@ -533,7 +509,6 @@ function TourDiarySection({ tourDiary }) {
         </button>
       </div>
 
-      {/* Mini stats */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginBottom:24 }}>
         {[
           { label:"Total Tours",    value:totalTours,  color:"#6B1A1A", icon:"🗺️" },
@@ -551,7 +526,6 @@ function TourDiarySection({ tourDiary }) {
         ))}
       </div>
 
-      {/* Active tour spotlight */}
       {activeTour && (
         <div style={{ marginBottom:20 }}>
           <p style={{ margin:"0 0 10px", fontSize:11, fontWeight:700, color:"#D97706", letterSpacing:"0.08em", textTransform:"uppercase" }}>🔴 Currently Active</p>
@@ -559,7 +533,6 @@ function TourDiarySection({ tourDiary }) {
         </div>
       )}
 
-      {/* Upcoming + Recent side by side */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
         <div>
           <p style={{ margin:"0 0 10px", fontSize:11, fontWeight:700, color:"#2563EB", letterSpacing:"0.08em", textTransform:"uppercase" }}>🔜 Upcoming Tours</p>
@@ -603,13 +576,11 @@ function TourDiarySection({ tourDiary }) {
 function LiveStatusBadge({ currentCitizen, meetings }) {
   const [tick, setTick] = useState(0);
 
-  // Tick every second for the live countdown
   useEffect(() => {
     const t = setInterval(() => setTick(s => s + 1), 1000);
     return () => clearInterval(t);
   }, []);
 
-  // Check for an ongoing executive meeting right now
   const now = nowMinutes();
   const ongoingMeeting = meetings.find(m => {
     if (!m.meeting_time) return false;
@@ -618,7 +589,6 @@ function LiveStatusBadge({ currentCitizen, meetings }) {
     return now >= start && now <= end;
   }) || null;
 
-  // ── State: Meeting in progress (citizen in cabin) ──────────────────────────
   if (currentCitizen) {
     let timeRemaining = "—";
     if (currentCitizen.appointment_end_time) {
@@ -647,13 +617,7 @@ function LiveStatusBadge({ currentCitizen, meetings }) {
         {currentCitizen.appointment_end_time && (
           <div style={liveStyles.row}>
             <span style={liveStyles.rowLabel}>Time Remaining</span>
-            <span style={{
-              ...liveStyles.rowValue,
-              fontFamily: "monospace",
-              fontSize: 16,
-              color: timeRemaining === "00:00" ? "#EF4444" : "#4ADE80",
-              letterSpacing: "0.08em",
-            }}>
+            <span style={{ ...liveStyles.rowValue, fontFamily: "monospace", fontSize: 16, color: timeRemaining === "00:00" ? "#EF4444" : "#4ADE80", letterSpacing: "0.08em" }}>
               {timeRemaining}
             </span>
           </div>
@@ -662,7 +626,6 @@ function LiveStatusBadge({ currentCitizen, meetings }) {
     );
   }
 
-  // ── State: Executive meeting ongoing ──────────────────────────────────────
   if (ongoingMeeting) {
     let timeRemaining = "—";
     if (ongoingMeeting.meeting_end_time) {
@@ -693,13 +656,7 @@ function LiveStatusBadge({ currentCitizen, meetings }) {
         {ongoingMeeting.meeting_end_time && (
           <div style={liveStyles.row}>
             <span style={liveStyles.rowLabel}>Time Remaining</span>
-            <span style={{
-              ...liveStyles.rowValue,
-              fontFamily: "monospace",
-              fontSize: 16,
-              color: timeRemaining === "00:00" ? "#EF4444" : "#A78BFA",
-              letterSpacing: "0.08em",
-            }}>
+            <span style={{ ...liveStyles.rowValue, fontFamily: "monospace", fontSize: 16, color: timeRemaining === "00:00" ? "#EF4444" : "#A78BFA", letterSpacing: "0.08em" }}>
               {timeRemaining}
             </span>
           </div>
@@ -708,7 +665,6 @@ function LiveStatusBadge({ currentCitizen, meetings }) {
     );
   }
 
-  // ── State: Cabin available ─────────────────────────────────────────────────
   return (
     <div style={{ ...liveStyles.badge, border: "1px solid rgba(255,255,255,0.08)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)" }}>
       <div style={liveStyles.header}>
@@ -724,62 +680,14 @@ function LiveStatusBadge({ currentCitizen, meetings }) {
 }
 
 const liveStyles = {
-  badge: {
-    background: "rgba(255,255,255,0.08)",
-    border: "1px solid rgba(74,222,128,0.25)",
-    borderRadius: 14,
-    padding: "10px 14px",
-    minWidth: 190,
-    backdropFilter: "blur(8px)",
-    display: "flex",
-    flexDirection: "column",
-    gap: 6,
-    boxShadow: "0 0 0 1px rgba(74,222,128,0.15), 0 0 20px rgba(74,222,128,0.08), inset 0 1px 0 rgba(255,255,255,0.08)",
-  },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    gap: 7,
-  },
-  headerLabel: {
-    fontSize: 11,
-    fontWeight: 800,
-    color: "#4ADE80",
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: "50%",
-    display: "inline-block",
-    flexShrink: 0,
-  },
-  divider: {
-    height: 1,
-    background: "rgba(255,255,255,0.1)",
-    margin: "2px 0",
-  },
-  row: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 8,
-  },
-  rowLabel: {
-    fontSize: 10,
-    color: "rgba(255,255,255,0.45)",
-    fontWeight: 600,
-    textTransform: "uppercase",
-    letterSpacing: "0.06em",
-    flexShrink: 0,
-  },
-  rowValue: {
-    fontSize: 13,
-    fontWeight: 700,
-    color: "#fff",
-    textAlign: "right",
-  },
+  badge:      { background: "rgba(255,255,255,0.08)", border: "1px solid rgba(74,222,128,0.25)", borderRadius: 14, padding: "10px 14px", minWidth: 190, backdropFilter: "blur(8px)", display: "flex", flexDirection: "column", gap: 6, boxShadow: "0 0 0 1px rgba(74,222,128,0.15), 0 0 20px rgba(74,222,128,0.08), inset 0 1px 0 rgba(255,255,255,0.08)" },
+  header:     { display: "flex", alignItems: "center", gap: 7 },
+  headerLabel:{ fontSize: 11, fontWeight: 800, color: "#4ADE80", letterSpacing: "0.08em", textTransform: "uppercase" },
+  dot:        { width: 8, height: 8, borderRadius: "50%", display: "inline-block", flexShrink: 0 },
+  divider:    { height: 1, background: "rgba(255,255,255,0.1)", margin: "2px 0" },
+  row:        { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 },
+  rowLabel:   { fontSize: 10, color: "rgba(255,255,255,0.45)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 },
+  rowValue:   { fontSize: 13, fontWeight: 700, color: "#fff", textAlign: "right" },
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -791,62 +699,146 @@ export default function MDDashboard() {
   const [popup, setPopup]               = useState(null);
   const [greeting, setGreeting]         = useState(getDynamicGreeting());
 
-  // ── Timeline independent date state ──
+  // ── Timeline state — kept independent from realtime/today refreshes ──────
   const [timelineDate, setTimelineDate]         = useState(getTodayLocalDate());
   const [timelineAppts, setTimelineAppts]       = useState([]);
   const [timelineMeetings, setTimelineMeetings] = useState([]);
   const [timelineLoading, setTimelineLoading]   = useState(false);
+  const [timelineError, setTimelineError]       = useState(null);
+
+  // Stable today string — computed once per render cycle, never changes mid-session
+  const todayRef = useRef(getTodayLocalDate());
+  const today    = todayRef.current;
+
+  // Track in-flight fetch to abort stale results
+  const timelineFetchId = useRef(0);
+
+  // Scroll target for timeline
+  const timelineRef = useRef(null);
 
   const shownPopupsRef = useRef(new Set());
-  const today = getTodayLocalDate();
 
+  // ── Fetch today's data (appointments + meetings + tour diary) ─────────────
+  // Uses a ref so realtime callback never captures a stale closure
   const fetchAll = useCallback(async () => {
-    const [apptRes, meetRes, tourRes] = await Promise.all([
-      supabase.from("appointments").select("*").eq("appointment_date", today).order("appointment_time", { ascending: true }),
-      supabase.from("executive_meetings").select("*").eq("meeting_date", today),
-      supabase.from("tour_diary").select("*"),
-    ]);
-    if (!apptRes.error) setAppointments(apptRes.data ?? []);
-    if (!meetRes.error) setMeetings(sortByTime(meetRes.data ?? [], "meeting_time"));
-    if (!tourRes.error) setTourDiary(tourRes.data ?? []);
-  }, [today]);
+    const currentToday = getTodayLocalDate(); // always fresh
 
-  const fetchTimeline = useCallback(async (dateStr) => {
-    setTimelineLoading(true);
-    const [apptRes, meetRes] = await Promise.all([
-      supabase.from("appointments").select("*").eq("appointment_date", dateStr).order("appointment_time", { ascending: true }),
-      supabase.from("executive_meetings").select("*").eq("meeting_date", dateStr),
+    const [apptRes, meetRes, tourRes] = await Promise.all([
+      supabase
+        .from("appointments")
+        .select("*")
+        .eq("appointment_date", currentToday)
+        .order("appointment_time", { ascending: true }),
+      supabase
+        .from("executive_meetings")
+        .select("*")
+        .eq("meeting_date", currentToday),
+      supabase
+        .from("tour_diary")
+        .select("*"),
     ]);
-    if (!apptRes.error) setTimelineAppts(apptRes.data ?? []);
-    if (!meetRes.error) setTimelineMeetings(sortByTime(meetRes.data ?? [], "meeting_time"));
+
+    if (apptRes.error) {
+      console.error("[MDDashboard] appointments fetch error:", apptRes.error);
+    } else {
+      console.log(`[MDDashboard] today appointments (${currentToday}):`, apptRes.data?.length ?? 0, apptRes.data);
+      setAppointments(apptRes.data ?? []);
+    }
+
+    if (meetRes.error) {
+      console.error("[MDDashboard] meetings fetch error:", meetRes.error);
+    } else {
+      console.log(`[MDDashboard] today meetings (${currentToday}):`, meetRes.data?.length ?? 0, meetRes.data);
+      setMeetings(sortByTime(meetRes.data ?? [], "meeting_time"));
+    }
+
+    if (!tourRes.error) {
+      setTourDiary(tourRes.data ?? []);
+    }
+  }, []); // no deps — always reads live today
+
+  // ── Fetch timeline for any arbitrary date ─────────────────────────────────
+  const fetchTimeline = useCallback(async (dateStr) => {
+    // Cancel any in-flight fetch for a different date
+    const fetchId = ++timelineFetchId.current;
+
+    setTimelineLoading(true);
+    setTimelineError(null);
+
+    console.log(`[Timeline] fetching date: ${dateStr}`);
+
+    const [apptRes, meetRes] = await Promise.all([
+      supabase
+        .from("appointments")
+        .select("*")
+        .eq("appointment_date", dateStr)
+        .order("appointment_time", { ascending: true }),
+      supabase
+        .from("executive_meetings")
+        .select("*")
+        .eq("meeting_date", dateStr),
+    ]);
+
+    // Discard result if a newer fetch already started
+    if (fetchId !== timelineFetchId.current) {
+      console.log(`[Timeline] discarding stale fetch for ${dateStr}`);
+      return;
+    }
+
+    if (apptRes.error) {
+      console.error("[Timeline] appointments error:", apptRes.error);
+      setTimelineError(`Could not load appointments: ${apptRes.error.message}`);
+    } else {
+      console.log(`[Timeline] appointments for ${dateStr}:`, apptRes.data?.length ?? 0, apptRes.data);
+      setTimelineAppts(apptRes.data ?? []);
+    }
+
+    if (meetRes.error) {
+      console.error("[Timeline] meetings error:", meetRes.error);
+    } else {
+      console.log(`[Timeline] meetings for ${dateStr}:`, meetRes.data?.length ?? 0, meetRes.data);
+      setTimelineMeetings(sortByTime(meetRes.data ?? [], "meeting_time"));
+    }
+
     setTimelineLoading(false);
   }, []);
 
-  // Sync timeline when timelineDate changes
-  useEffect(() => { fetchTimeline(timelineDate); }, [timelineDate, fetchTimeline]);
+  // ── Effect: fetch timeline whenever the selected date changes ─────────────
+  useEffect(() => {
+    fetchTimeline(timelineDate);
+    // Scroll timeline into view smoothly on date change
+    if (timelineRef.current) {
+      timelineRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [timelineDate, fetchTimeline]);
 
-  // Also refresh timeline if it's showing today and fetchAll runs
+  // ── Effect: when today's data refreshes AND timeline is showing today,
+  //    sync it — but DO NOT touch timeline if viewing a different date ────────
   useEffect(() => {
     if (timelineDate === today) {
       setTimelineAppts(appointments);
       setTimelineMeetings(meetings);
     }
+    // intentionally NOT fetching from Supabase here — avoids duplicate fetches
   }, [appointments, meetings, timelineDate, today]);
 
+  // ── Effect: initial load + 30-second polling for today's live data ─────────
   useEffect(() => {
     fetchAll();
     const interval = setInterval(fetchAll, 30000);
     return () => clearInterval(interval);
   }, [fetchAll]);
 
-  // ── Realtime: instant push on any change — no polling needed ──
+  // ── Realtime: push updates for today's data only ──────────────────────────
   useRealtime({ appointments: fetchAll, executive_meetings: fetchAll, tour_diary: fetchAll });
 
+  // ── Effect: greeting refresh every minute ─────────────────────────────────
   useEffect(() => {
     const t = setInterval(() => setGreeting(getDynamicGreeting()), 60000);
     return () => clearInterval(t);
   }, []);
 
+  // ── Effect: popup logic runs only on today's appointments/meetings ─────────
   useEffect(() => {
     function checkPopups() {
       const now = nowMinutes();
@@ -862,12 +854,10 @@ export default function MDDashboard() {
         }
       }
 
-      // Check upcoming executive meetings — fire popup 5 min before start
       for (const m of meetings) {
         if (!m.meeting_time) continue;
         const startMin = parseTimeToMinutes(m.meeting_time);
         const key = `meeting-${m.id}`;
-        // Trigger window: 5 minutes before the meeting starts
         if (now >= startMin - 5 && now < startMin + 2 && !shownPopupsRef.current.has(key)) {
           shownPopupsRef.current.add(key);
           setPopup({ type: "meeting", ...m });
@@ -897,10 +887,40 @@ export default function MDDashboard() {
   const handleMarkCompleted = async () => {
     if (!popup || popup.type !== "appointment") return;
     const { error } = await supabase.from("appointments").update({ status: "Completed" }).eq("id", popup.id);
-    if (error) console.log(error);
+    if (error) console.error("[MDDashboard] mark completed error:", error);
     setPopup(null);
     fetchAll();
   };
+
+  // ── Date navigation helpers ───────────────────────────────────────────────
+  const isOnToday   = timelineDate === today;
+  const isNextDisabled = isOnToday; // never allow going beyond today
+
+  function handlePrevDay() {
+    const d = new Date(timelineDate + "T00:00:00");
+    d.setDate(d.getDate() - 1);
+    setTimelineDate(d.toISOString().split("T")[0]);
+  }
+
+  function handleNextDay() {
+    if (isNextDisabled) return;
+    const d = new Date(timelineDate + "T00:00:00");
+    d.setDate(d.getDate() + 1);
+    const next = d.toISOString().split("T")[0];
+    // Safety: clamp to today
+    setTimelineDate(next > today ? today : next);
+  }
+
+  function handleDatePick(e) {
+    const picked = e.target.value;
+    if (!picked) return;
+    // Clamp — never allow future dates
+    if (picked > today) {
+      setTimelineDate(today);
+    } else {
+      setTimelineDate(picked);
+    }
+  }
 
   const currentCitizen  = appointments.find(a => a.status === "In Cabin") || null;
   const waitingCitizens = sortByTime(appointments.filter(a => a.status === "Waiting"), "appointment_time");
@@ -908,6 +928,11 @@ export default function MDDashboard() {
   const completedCount  = appointments.filter(a => a.status === "Completed").length;
   const totalCount      = appointments.length;
   const progressPct     = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  // Summary counts for the selected timeline date
+  const tlApptCount    = timelineAppts.length;
+  const tlMeetingCount = timelineMeetings.length;
+  const tlHasEvents    = tlApptCount > 0 || tlMeetingCount > 0;
 
   return (
     <div style={{ minHeight: "100vh", background: "#F0F4FF", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
@@ -929,6 +954,9 @@ export default function MDDashboard() {
           from { opacity: 0; transform: translateY(16px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
         .stat-card:hover { transform: translateY(-4px) scale(1.02); }
         .stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .meeting-card:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(37,99,235,0.15) !important; }
@@ -937,6 +965,9 @@ export default function MDDashboard() {
         .join-btn { transition: filter 0.15s, transform 0.15s; }
         .citizen-row:hover { background: #EFF6FF !important; }
         .citizen-row { transition: background 0.15s; }
+        .tl-nav-btn { background: #F1F5F9; border: 1.5px solid #E2E8F0; border-radius: 10px; padding: 8px 13px; cursor: pointer; fontSize: 14px; font-weight: 700; color: #374151; line-height: 1; transition: background 0.15s, opacity 0.15s; }
+        .tl-nav-btn:hover:not(:disabled) { background: #E2E8F0; }
+        .tl-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
       `}</style>
 
       {/* HEADER */}
@@ -951,9 +982,7 @@ export default function MDDashboard() {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {/* Live Status Badge */}
           <LiveStatusBadge currentCitizen={currentCitizen} meetings={meetings} />
-
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", borderRadius: 99, padding: "8px 16px" }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ADE80", animation: "pulse-ring 1.8s ease infinite", display: "inline-block" }} />
             <span style={{ fontSize: 12, color: "#fff", fontWeight: 600 }}>Live Dashboard</span>
@@ -996,8 +1025,6 @@ export default function MDDashboard() {
 
         {/* CURRENT + NEXT CITIZEN */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginBottom: 28 }}>
-
-          {/* Currently Meeting */}
           <div style={{ background: "#fff", borderRadius: 22, padding: 28, boxShadow: "0 8px 32px rgba(37,99,235,0.12)", border: "2px solid #DBEAFE", position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "linear-gradient(90deg, #2563EB, #7C3AED)" }} />
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
@@ -1034,7 +1061,6 @@ export default function MDDashboard() {
             )}
           </div>
 
-          {/* Next Citizen */}
           <div style={{ background: "#fff", borderRadius: 22, padding: 28, boxShadow: "0 8px 32px rgba(16,185,129,0.1)", border: "2px solid #D1FAE5", position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "linear-gradient(90deg, #10B981, #059669)" }} />
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
@@ -1118,58 +1144,68 @@ export default function MDDashboard() {
         {/* TOUR DIARY */}
         <TourDiarySection tourDiary={tourDiary} />
 
-        {/* TODAY'S TIMELINE */}
-        <div style={{ background: "#fff", borderRadius: 22, padding: 28, boxShadow: "0 8px 32px rgba(0,0,0,0.06)", marginBottom: 28 }}>
+        {/* ── SCHEDULE / TIMELINE ─────────────────────────────────────────── */}
+        <div ref={timelineRef} style={{ background: "#fff", borderRadius: 22, padding: 28, boxShadow: "0 8px 32px rgba(0,0,0,0.06)", marginBottom: 28 }}>
 
           {/* Header row */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22, flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+
+            {/* Title + summary badge */}
             <div>
               <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: "#6B7280", letterSpacing: "0.08em", textTransform: "uppercase" }}>Chronological</p>
               <h2 style={{ margin: "2px 0 0", fontSize: 20, fontWeight: 800, color: "#111827" }}>
-                {timelineDate === today ? "Today's Timeline" : "Schedule"}
+                {isOnToday ? "Today's Timeline" : "Schedule"}
               </h2>
+              {/* Per-date summary counts */}
+              {!timelineLoading && (
+                <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#2563EB", background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 99, padding: "2px 10px" }}>
+                    👥 {tlApptCount} citizen{tlApptCount !== 1 ? "s" : ""}
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#7C3AED", background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: 99, padding: "2px 10px" }}>
+                    🤝 {tlMeetingCount} meeting{tlMeetingCount !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Date navigator */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {/* Prev day */}
+              {/* ◀ Previous — always enabled */}
               <button
-                onClick={() => {
-                  const d = new Date(timelineDate + "T00:00:00");
-                  d.setDate(d.getDate() - 1);
-                  setTimelineDate(d.toISOString().split("T")[0]);
-                }}
-                style={{ background: "#F1F5F9", border: "1.5px solid #E2E8F0", borderRadius: 10, padding: "8px 13px", cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#374151", lineHeight: 1 }}
+                className="tl-nav-btn"
+                onClick={handlePrevDay}
+                title="Previous day"
               >◀</button>
 
-              {/* Date picker + label */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: 12, padding: "8px 14px", cursor: "pointer", position: "relative" }}>
+              {/* Date display + hidden picker */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: `1.5px solid ${isOnToday ? "#BFDBFE" : "#DDD6FE"}`, borderRadius: 12, padding: "8px 14px", cursor: "pointer", position: "relative", minWidth: 130 }}>
                 <span style={{ fontSize: 15 }}>📅</span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: "#111827", whiteSpace: "nowrap" }}>
-                  {timelineDate === today
+                  {isOnToday
                     ? "Today"
                     : new Date(timelineDate + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}
                 </span>
+                {/* Hidden date input — max clamped to today */}
                 <input
                   type="date"
                   value={timelineDate}
-                  onChange={e => setTimelineDate(e.target.value)}
+                  max={today}
+                  onChange={handleDatePick}
                   style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }}
                 />
               </div>
 
-              {/* Next day */}
+              {/* ▶ Next — disabled when on today */}
               <button
-                onClick={() => {
-                  const d = new Date(timelineDate + "T00:00:00");
-                  d.setDate(d.getDate() + 1);
-                  setTimelineDate(d.toISOString().split("T")[0]);
-                }}
-                style={{ background: "#F1F5F9", border: "1.5px solid #E2E8F0", borderRadius: 10, padding: "8px 13px", cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#374151", lineHeight: 1 }}
+                className="tl-nav-btn"
+                onClick={handleNextDay}
+                disabled={isNextDisabled}
+                title={isNextDisabled ? "Cannot navigate beyond today" : "Next day"}
               >▶</button>
 
-              {/* Back to today pill — only show when not on today */}
-              {timelineDate !== today && (
+              {/* Back to Today pill — only when not on today */}
+              {!isOnToday && (
                 <button
                   onClick={() => setTimelineDate(today)}
                   style={{ background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE", borderRadius: 99, padding: "7px 14px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}
@@ -1190,20 +1226,80 @@ export default function MDDashboard() {
             </div>
           </div>
 
-          {/* Full date display */}
-          <div style={{ marginBottom: 18, padding: "10px 16px", background: timelineDate === today ? "#EFF6FF" : "#F5F3FF", borderRadius: 12, border: `1px solid ${timelineDate === today ? "#BFDBFE" : "#DDD6FE"}`, display: "inline-flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 14 }}>{timelineDate === today ? "🟢" : "📆"}</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: timelineDate === today ? "#1E3A8A" : "#4C1D95" }}>
+          {/* Full date label bar */}
+          <div style={{ marginBottom: 20, padding: "10px 16px", background: isOnToday ? "#EFF6FF" : "#F5F3FF", borderRadius: 12, border: `1px solid ${isOnToday ? "#BFDBFE" : "#DDD6FE"}`, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 14 }}>{isOnToday ? "🟢" : "📆"}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: isOnToday ? "#1E3A8A" : "#4C1D95" }}>
               {new Date(timelineDate + "T00:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
             </span>
-            {timelineLoading && <span style={{ fontSize: 12, color: "#6B7280", fontWeight: 600 }}>Loading…</span>}
+            {timelineLoading && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: "#6B7280", fontWeight: 600, marginLeft: "auto" }}>
+                <span style={{ width: 14, height: 14, border: "2px solid #E5E7EB", borderTopColor: "#2563EB", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />
+                Loading schedule…
+              </span>
+            )}
           </div>
 
-          <TodayTimeline
-            appointments={timelineAppts}
-            meetings={timelineMeetings}
-            isToday={timelineDate === today}
-          />
+          {/* Error state */}
+          {timelineError && !timelineLoading && (
+            <div style={{ background: "#FEF2F2", border: "1.5px solid #FECACA", borderRadius: 14, padding: "20px 24px", marginBottom: 16, display: "flex", alignItems: "center", gap: 14 }}>
+              <span style={{ fontSize: 28 }}>⚠️</span>
+              <div>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#B91C1C" }}>Failed to load schedule</p>
+                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#DC2626" }}>{timelineError}</p>
+                <button
+                  onClick={() => fetchTimeline(timelineDate)}
+                  style={{ marginTop: 8, background: "#DC2626", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Loading skeleton */}
+          {timelineLoading && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {[1, 2, 3].map(i => (
+                <div key={i} style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <div style={{ width: 80, height: 16, background: "#F3F4F6", borderRadius: 6, flexShrink: 0 }} />
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#E5E7EB", flexShrink: 0 }} />
+                  <div style={{ flex: 1, height: 60, background: "#F8FAFC", borderRadius: 12, border: "1px solid #E5E7EB" }} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Empty state — no loading, no error, no events */}
+          {!timelineLoading && !timelineError && !tlHasEvents && (
+            <div style={{ background: "linear-gradient(135deg,#F8FAFC,#F1F5F9)", border: "2px dashed #CBD5E1", borderRadius: 18, padding: "48px 32px", textAlign: "center" }}>
+              <div style={{ fontSize: 52, marginBottom: 14, lineHeight: 1 }}>📋</div>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#374151" }}>No Schedule Found</h3>
+              <p style={{ margin: "8px 0 0", fontSize: 14, color: "#6B7280", maxWidth: 340, marginLeft: "auto", marginRight: "auto", lineHeight: 1.6 }}>
+                No appointments or meetings have been scheduled for{" "}
+                <strong style={{ color: "#1E3A8A" }}>
+                  {new Date(timelineDate + "T00:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                </strong>.
+              </p>
+              {!isOnToday && (
+                <button
+                  onClick={() => setTimelineDate(today)}
+                  style={{ marginTop: 20, background: "linear-gradient(135deg,#2563EB,#1E3A8A)", color: "#fff", border: "none", borderRadius: 12, padding: "10px 22px", fontSize: 13, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(37,99,235,0.3)" }}
+                >
+                  ← Back to Today
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Timeline — only render when not loading, no error, events exist */}
+          {!timelineLoading && !timelineError && tlHasEvents && (
+            <TodayTimeline
+              appointments={timelineAppts}
+              meetings={timelineMeetings}
+              isToday={isOnToday}
+            />
+          )}
         </div>
 
         {/* FOCUS + QUEUE */}
