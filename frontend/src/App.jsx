@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 
 import CitizenBooking from "./pages/CitizenBooking";
 
@@ -8,230 +9,143 @@ import StaffLayout from "./pages/staff/StaffLayout";
 import MDLogin from "./pages/md/MDLogin";
 import MDLayout from "./pages/md/MDLayout";
 
+// ─── Protected Route Wrappers ─────────────────────────────────────────────────
+
+function ProtectedStaff({ isLoggedIn, children }) {
+  return isLoggedIn ? children : <Navigate to="/staff/login" replace />;
+}
+
+function ProtectedMD({ isLoggedIn, children }) {
+  return isLoggedIn ? children : <Navigate to="/md/login" replace />;
+}
+
+// ─── Main App ─────────────────────────────────────────────────────────────────
+
 export default function App() {
-
-  const [page, setPage] = useState("citizen");
-
   const [isStaffLoggedIn, setIsStaffLoggedIn] = useState(false);
+  const [isMDLoggedIn, setIsMDLoggedIn]       = useState(false);
 
-  const [isMDLoggedIn, setIsMDLoggedIn] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Derive active page from current path for nav button highlighting
+  const path = location.pathname;
 
   return (
-
     <div>
-
       {/* Top Navigation */}
-
       <div
-
         style={{
-
           display: "flex",
-
           gap: "12px",
-
           padding: "15px",
-
           background: "#ffffff",
-
           borderBottom: "1px solid #e5e7eb",
-
           position: "sticky",
-
           top: 0,
-
           zIndex: 1000,
-
         }}
-
       >
-
         {/* Citizen */}
-
         <button
-
-          onClick={() => setPage("citizen")}
-
+          onClick={() => navigate("/")}
           style={{
-
             ...navButton,
-
-            background:
-
-              page === "citizen"
-
-                ? "#2563EB"
-
-                : "#F1F5F9",
-
-            color:
-
-              page === "citizen"
-
-                ? "white"
-
-                : "#0F172A",
-
+            background: path === "/" ? "#2563EB" : "#F1F5F9",
+            color:      path === "/" ? "white"    : "#0F172A",
           }}
-
         >
-
           Citizen Portal
-
         </button>
 
         {/* Staff Login */}
-
         <button
-
-          onClick={() => setPage("staffLogin")}
-
+          onClick={() => navigate("/staff/login")}
           style={{
-
             ...navButton,
-
-            background:
-
-              page === "staffLogin"
-
-                ? "#2563EB"
-
-                : "#F1F5F9",
-
-            color:
-
-              page === "staffLogin"
-
-                ? "white"
-
-                : "#0F172A",
-
+            background: path.startsWith("/staff") ? "#2563EB" : "#F1F5F9",
+            color:      path.startsWith("/staff") ? "white"    : "#0F172A",
           }}
-
         >
-
           Staff Login
-
         </button>
 
         {/* MD Login */}
-
         <button
-
-          onClick={() => setPage("mdLogin")}
-
+          onClick={() => navigate("/md/login")}
           style={{
-
             ...navButton,
-
-            background:
-
-              page === "mdLogin"
-
-                ? "#10B981"
-
-                : "#F1F5F9",
-
-            color:
-
-              page === "mdLogin"
-
-                ? "white"
-
-                : "#0F172A",
-
+            background: path.startsWith("/md") ? "#10B981" : "#F1F5F9",
+            color:      path.startsWith("/md") ? "white"    : "#0F172A",
           }}
-
         >
-
           MD Login
-
         </button>
-
       </div>
 
-      {/* Citizen */}
+      {/* Routes */}
+      <Routes>
+        {/* Citizen Portal */}
+        <Route path="/" element={<CitizenBooking />} />
 
-      {page === "citizen" && (
-
-        <CitizenBooking />
-
-      )}
-
-      {/* Staff Login */}
-
-      {page === "staffLogin" && (
-
-        <StaffLogin
-
-          onLogin={() => {
-
-            setIsStaffLoggedIn(true);
-
-            setPage("staff");
-
-          }}
-
+        {/* Staff Login */}
+        <Route
+          path="/staff/login"
+          element={
+            <StaffLogin
+              onLogin={() => {
+                setIsStaffLoggedIn(true);
+                navigate("/staff");
+              }}
+            />
+          }
         />
 
-      )}
-
-      {/* Staff Portal */}
-
-      {page === "staff" &&
-
-        isStaffLoggedIn && (
-
-          <StaffLayout />
-
-      )}
-
-      {/* MD Login */}
-
-      {page === "mdLogin" && (
-
-        <MDLogin
-
-          onLogin={() => {
-
-            setIsMDLoggedIn(true);
-
-            setPage("md");
-
-          }}
-
+        {/* Staff Portal — protected */}
+        <Route
+          path="/staff"
+          element={
+            <ProtectedStaff isLoggedIn={isStaffLoggedIn}>
+              <StaffLayout />
+            </ProtectedStaff>
+          }
         />
 
-      )}
+        {/* MD Login */}
+        <Route
+          path="/md/login"
+          element={
+            <MDLogin
+              onLogin={() => {
+                setIsMDLoggedIn(true);
+                navigate("/md");
+              }}
+            />
+          }
+        />
 
-      {/* MD Dashboard */}
+        {/* MD Dashboard — protected */}
+        <Route
+          path="/md"
+          element={
+            <ProtectedMD isLoggedIn={isMDLoggedIn}>
+              <MDLayout />
+            </ProtectedMD>
+          }
+        />
 
-      {page === "md" &&
-
-        isMDLoggedIn && (
-
-          <MDLayout />
-
-      )}
-
+        {/* Catch-all — redirect unknown routes to citizen portal */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </div>
-
   );
-
 }
 
 const navButton = {
-
   border: "none",
-
   padding: "12px 18px",
-
   borderRadius: "10px",
-
   cursor: "pointer",
-
   fontWeight: "600",
-
   transition: "0.3s",
-
 };
