@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Component } from "react";
 import tribalLogo from "../../assets/tribal-logo.jpg";
 import { supabase } from "../../lib/supabase";
 import { useRealtime } from "../../hooks/useRealtime";
@@ -913,6 +913,33 @@ function CitizenTimeOverPopup({ data, onCompleted, onNext, onExtend, onDismiss, 
   );
 }
 
+// ─── Error Boundary ─────────────────────────────────────────────────────────
+// Stops a single widget's runtime error from blanking the entire dashboard.
+// A caught error renders a small inline fallback instead of a white screen.
+
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error, info) {
+    console.error("[MDDashboard] widget error caught by boundary:", error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback ?? (
+        <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 14, padding: "16px 20px", color: "#991B1B", fontSize: 13, fontWeight: 600 }}>
+          ⚠️ This section couldn't be displayed. The rest of the dashboard is still available.
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function MDDashboard({ onLogout }) {
@@ -1215,6 +1242,17 @@ export default function MDDashboard({ onLogout }) {
     closeTimeOverPopup(true);
   };
 
+  // Completes the appointment shown in the generic popup (appointment-type).
+  // Restored: it is referenced by <Popup onComplete={...}> and its absence threw
+  // a ReferenceError at render time (blank screen) whenever any popup appeared.
+  const handleMarkCompleted = async () => {
+    if (!popup || popup.type !== "appointment") { setPopup(null); return; }
+    const { error } = await supabase.from("appointments").update({ status: "Completed" }).eq("id", popup.id);
+    if (error) console.error("[MDDashboard] mark completed error:", error);
+    setPopup(null);
+    fetchAll();
+  };
+
   // If Staff changes the in-cabin citizen's status away (e.g., to Completed) via
   // realtime, any open time-over popup for them is no longer relevant — close it.
   useEffect(() => {
@@ -1292,17 +1330,23 @@ export default function MDDashboard({ onLogout }) {
   return (
     <div style={{ minHeight: "100vh", background: "#F0F4FF", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
 
-      {popup && <Popup data={popup} onComplete={handleMarkCompleted} onClose={() => setPopup(null)} />}
+      {popup && (
+        <ErrorBoundary fallback={null}>
+          <Popup data={popup} onComplete={handleMarkCompleted} onClose={() => setPopup(null)} />
+        </ErrorBoundary>
+      )}
 
       {timeOverPopup && (
-        <CitizenTimeOverPopup
-          data={timeOverPopup}
-          hasNext={!!nextInQueue}
-          onCompleted={handleTimeOverCompleted}
-          onNext={handleTimeOverNext}
-          onExtend={handleTimeOverExtend}
-          onDismiss={handleTimeOverDismiss}
-        />
+        <ErrorBoundary fallback={null}>
+          <CitizenTimeOverPopup
+            data={timeOverPopup}
+            hasNext={!!nextInQueue}
+            onCompleted={handleTimeOverCompleted}
+            onNext={handleTimeOverNext}
+            onExtend={handleTimeOverExtend}
+            onDismiss={handleTimeOverDismiss}
+          />
+        </ErrorBoundary>
       )}
 
       <style>{`
@@ -1348,7 +1392,9 @@ export default function MDDashboard({ onLogout }) {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <LiveStatusBadge currentCitizen={currentCitizen} meetings={meetings} />
+          <ErrorBoundary fallback={null}>
+            <LiveStatusBadge currentCitizen={currentCitizen} meetings={meetings} />
+          </ErrorBoundary>
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", borderRadius: 99, padding: "8px 16px" }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#4ADE80", animation: "pulse-ring 1.8s ease infinite", display: "inline-block" }} />
             <span style={{ fontSize: 12, color: "#fff", fontWeight: 600 }}>Live Dashboard</span>
@@ -1416,11 +1462,13 @@ export default function MDDashboard({ onLogout }) {
                   {currentCitizen.appointment_end_time && <span style={{ fontSize: 12, fontWeight: 600, color: "#7C3AED", background: "#F5F3FF", padding: "4px 10px", borderRadius: 99, border: "1px solid #DDD6FE" }}>→ {currentCitizen.appointment_end_time}</span>}
                   {currentCitizen.appointment_duration && <span style={{ fontSize: 12, fontWeight: 600, color: "#059669", background: "#ECFDF5", padding: "4px 10px", borderRadius: 99, border: "1px solid #A7F3D0" }}>⏱ {currentCitizen.appointment_duration} min</span>}
                 </div>
-                <CurrentCitizenTimer
-                  citizen={currentCitizen}
-                  extraMinutes={extensions[currentCitizen.id ?? currentCitizen.appointment_id] || 0}
-                  onExpire={() => handleCitizenTimeOver(currentCitizen)}
-                />
+                <ErrorBoundary fallback={null}>
+                  <CurrentCitizenTimer
+                    citizen={currentCitizen}
+                    extraMinutes={extensions[currentCitizen.id ?? currentCitizen.appointment_id] || 0}
+                    onExpire={() => handleCitizenTimeOver(currentCitizen)}
+                  />
+                </ErrorBoundary>
                 <div style={{ background: "linear-gradient(135deg,#EFF6FF,#DBEAFE)", borderRadius: 14, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <span style={{ fontSize: 13, color: "#1E3A8A", fontWeight: 600 }}>Token</span>
                   <span style={{ fontSize: 28, fontWeight: 900, color: "#2563EB", letterSpacing: "0.04em" }}>{currentCitizen.appointment_id}</span>
@@ -1516,7 +1564,9 @@ export default function MDDashboard({ onLogout }) {
         </div>
 
         {/* TOUR DIARY */}
-        <TourDiarySection tourDiary={tourDiary} />
+        <ErrorBoundary>
+          <TourDiarySection tourDiary={tourDiary} />
+        </ErrorBoundary>
 
         {/* ── SCHEDULE / TIMELINE ─────────────────────────────────────────── */}
         <div ref={timelineRef} style={{ background: "#fff", borderRadius: 22, padding: 28, boxShadow: "0 8px 32px rgba(0,0,0,0.06)", marginBottom: 28 }}>
@@ -1680,11 +1730,13 @@ export default function MDDashboard({ onLogout }) {
 
           {/* Timeline — only render when not loading, no error, events exist */}
           {!timelineLoading && !timelineError && tlHasEvents && (
-            <TodayTimeline
-              appointments={timelineAppts}
-              meetings={timelineMeetings}
-              isToday={isOnToday}
-            />
+            <ErrorBoundary>
+              <TodayTimeline
+                appointments={timelineAppts}
+                meetings={timelineMeetings}
+                isToday={isOnToday}
+              />
+            </ErrorBoundary>
           )}
         </div>
 
