@@ -10,6 +10,7 @@ export const translations = {
     lunchBreak:       "Lunch Break",
     appointmentsWith: "Appointments With",
     designationMD:    "Commissioner / Managing Director",
+    durationDesc:     "Select how long you need with the Commissioner / Managing Director. Each slot is 5 minutes.",
 
     // Progress bar
     step:     "Step",
@@ -79,6 +80,7 @@ export const translations = {
     lunchBreak:       "जेवणाची सुट्टी",
     appointmentsWith: "भेट घ्या",
     designationMD:    "आयुक्त / व्यवस्थापकीय संचालक",
+    durationDesc:     "आयुक्त / व्यवस्थापकीय संचालक यांच्याशी किती वेळ हवा ते निवडा. प्रत्येक स्लॉट ५ मिनिटांचा आहे.",
 
     // Progress bar
     step:     "पायरी",
@@ -148,6 +150,7 @@ export const translations = {
     lunchBreak:       "दोपहर का अवकाश",
     appointmentsWith: "अपॉइंटमेंट लें",
     designationMD:    "आयुक्त / प्रबंध निदेशक",
+    durationDesc:     "आयुक्त / प्रबंध निदेशक के साथ आपको कितने समय की जरूरत है चुनें। प्रत्येक स्लॉट ५ मिनट का है।",
 
     // Progress bar
     step:     "चरण",
