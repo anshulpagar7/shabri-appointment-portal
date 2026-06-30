@@ -21,7 +21,7 @@ export default function Sidebar({ active, setActive }) {
   const navigate = useNavigate();
 
   function handleLogoutConfirm() {
-    localStorage.removeItem("staffLoggedIn");
+    sessionStorage.removeItem("staffLoggedIn");
     setShowLogoutDialog(false);
     navigate("/staff/login");
   }
@@ -71,7 +71,7 @@ export default function Sidebar({ active, setActive }) {
                 <p style={styles.orgName}>
                   Maharashtra State Cooperative Tribal Development Corporation Ltd.
                 </p>
-                <p style={styles.orgSub}>Shabri Smart Appointment Portal</p>
+                <p style={styles.orgSub}>ADI SAMPARK — Smart Appointment Portal</p>
               </div>
             </>
           ) : (
