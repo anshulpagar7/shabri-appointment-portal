@@ -1,5 +1,6 @@
 import tribalLogo from "../assets/tribal-logo.jpg";
 import tdcLogo from "../assets/tdc-logo.jpeg";
+import commissionerLogo from "../assets/Commissioner.jpeg";
 
 export default function Header({ language, setLanguage }) {
   const getButtonStyle = (lang) => ({
@@ -48,6 +49,20 @@ export default function Header({ language, setLanguage }) {
         <img
           src={tdcLogo}
           alt="TDC Logo"
+          style={{
+            width: "60px",
+            height: "60px",
+            borderRadius: "50%",
+            background: "white",
+            padding: "4px",
+            objectFit: "cover",
+          }}
+        />
+
+        {/* Commissioner / MD Logo */}
+        <img
+          src={commissionerLogo}
+          alt="Commissioner Logo"
           style={{
             width: "60px",
             height: "60px",
