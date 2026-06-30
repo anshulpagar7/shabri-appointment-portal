@@ -5,10 +5,11 @@ import { supabase } from "../lib/supabase";
 import { useRealtime } from "../hooks/useRealtime";
 import tdcLogo from "../assets/tdc-logo.jpeg";
 import tribalLogo from "../assets/tribal-logo.jpg";
+import commissionerLogo from "../assets/Commissioner.jpeg";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const OFFICER = { name: "Leena Bansod", designation: "Managing Director" };
+const OFFICER = { name: "Leena Bansod", designation: "Commissioner / Managing Director" };
 
 const TOTAL_STEPS = 6;
 
@@ -260,13 +261,18 @@ function OfficerBadge({ t }) {
 
 function DualLogoRow() {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, marginBottom: 18 }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20, marginBottom: 18, flexWrap: "wrap" }}>
       <img src={tribalLogo} alt="Tribal Logo" style={{
         width: 68, height: 68, borderRadius: "50%", objectFit: "cover",
         border: "2px solid rgba(255,255,255,0.4)", background: "#fff", flexShrink: 0,
       }} />
       <div style={{ width: 1, height: 44, background: "rgba(255,255,255,0.3)", flexShrink: 0 }} />
       <img src={tdcLogo} alt="TDC Logo" style={{
+        width: 68, height: 68, borderRadius: "50%", objectFit: "cover",
+        border: "2px solid rgba(255,255,255,0.4)", background: "#fff", flexShrink: 0,
+      }} />
+      <div style={{ width: 1, height: 44, background: "rgba(255,255,255,0.3)", flexShrink: 0 }} />
+      <img src={commissionerLogo} alt="Commissioner Logo" style={{
         width: 68, height: 68, borderRadius: "50%", objectFit: "cover",
         border: "2px solid rgba(255,255,255,0.4)", background: "#fff", flexShrink: 0,
       }} />
@@ -762,7 +768,7 @@ export default function CitizenBooking() {
           <OfficerBadge t={t} />
 
           <p style={{ margin: "0 0 18px", fontSize: 13, color: "#6B7280", fontWeight: 500, lineHeight: 1.6 }}>
-            Select how long you need with the Managing Director. Each slot is 5 minutes.
+            Select how long you need with the Commissioner / Managing Director. Each slot is 5 minutes.
           </p>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 8 }}>
