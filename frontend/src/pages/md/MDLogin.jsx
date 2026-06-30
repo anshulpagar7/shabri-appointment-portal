@@ -45,13 +45,15 @@ export default function MDLogin({ onLogin }) {
         <div style={styles.leftContent}>
           <div style={styles.logoBlock}>
             <div style={styles.logoCircle}>
-              <img src={tribalLogo} alt="SHABRI Logo" style={styles.logoImg} />
+              <img src={tribalLogo} alt="ADI SAMPARK Logo" style={styles.logoImg} />
             </div>
           </div>
-          <h1 style={styles.orgName}>
+          <h1 style={styles.brandName}>ADI SAMPARK</h1>
+          <p style={styles.brandTagline}>Smart Appointment Portal</p>
+          <h2 style={styles.orgName}>
             Maharashtra State Cooperative<br />
             Tribal Development Corporation Ltd.
-          </h1>
+          </h2>
           <p style={styles.orgSub}>Appointment Management System</p>
           <div style={styles.divider} />
           <div style={styles.infoList}>
@@ -171,9 +173,25 @@ const styles = {
     height: "100%",
     objectFit: "cover",
   },
+  brandName: {
+    color: "#fff",
+    fontSize: "32px",
+    fontWeight: "900",
+    lineHeight: "1.1",
+    margin: "0 0 6px",
+    letterSpacing: "0.5px",
+  },
+  brandTagline: {
+    color: "rgba(255,255,255,0.75)",
+    fontSize: "13px",
+    fontWeight: "600",
+    margin: "0 0 22px",
+    letterSpacing: "1px",
+    textTransform: "uppercase",
+  },
   orgName: {
     color: "#fff",
-    fontSize: "20px",
+    fontSize: "16px",
     fontWeight: "700",
     lineHeight: "1.4",
     margin: "0 0 8px",
