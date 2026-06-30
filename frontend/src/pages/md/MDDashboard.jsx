@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback, Component } from "react";
-import tribalLogo from "../../assets/tribal-logo.jpg";
+import tribalLogo       from "../../assets/tribal-logo.jpg";
+import tdcLogo          from "../../assets/tdc-logo.jpeg";
+import commissionerLogo from "../../assets/Commissioner.jpeg";
 import { supabase } from "../../lib/supabase";
 import { useRealtime } from "../../hooks/useRealtime";
 
@@ -1383,8 +1385,18 @@ export default function MDDashboard({ onLogout }) {
       {/* HEADER */}
       <div style={{ background: "linear-gradient(135deg, #1E3A8A 0%, #2563EB 60%, #3B82F6 100%)", padding: "0 36px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 4px 24px rgba(37,99,235,0.3)", position: "sticky", top: 0, zIndex: 100, minHeight: 80 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 14, background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
-            <img src={tribalLogo} alt="Logo" style={{ width: 48, height: 48, objectFit: "contain" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 10, background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+              <img src={tribalLogo} alt="Tribal Logo" style={{ width: 42, height: 42, objectFit: "contain" }} />
+            </div>
+            <div style={{ width: 1, height: 30, background: "rgba(255,255,255,0.25)", flexShrink: 0 }} />
+            <div style={{ width: 48, height: 48, borderRadius: 10, background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+              <img src={tdcLogo} alt="TDC Logo" style={{ width: 42, height: 42, objectFit: "contain" }} />
+            </div>
+            <div style={{ width: 1, height: 30, background: "rgba(255,255,255,0.25)", flexShrink: 0 }} />
+            <div style={{ width: 48, height: 48, borderRadius: 10, background: "rgba(255,255,255,0.15)", border: "2px solid rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+              <img src={commissionerLogo} alt="Commissioner Logo" style={{ width: 42, height: 42, objectFit: "contain" }} />
+            </div>
           </div>
           <div>
             <p style={{ margin: 0, fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" }}>Government of Maharashtra</p>
