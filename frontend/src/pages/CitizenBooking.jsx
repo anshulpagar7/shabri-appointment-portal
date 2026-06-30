@@ -768,7 +768,7 @@ export default function CitizenBooking() {
           <OfficerBadge t={t} />
 
           <p style={{ margin: "0 0 18px", fontSize: 13, color: "#6B7280", fontWeight: 500, lineHeight: 1.6 }}>
-            Select how long you need with the Commissioner / Managing Director. Each slot is 5 minutes.
+            {t.durationDesc}
           </p>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 8 }}>
