@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 import tribalLogo from "../../assets/tribal-logo.jpg";
+import tdcLogo from "../../assets/tdc-logo.jpeg";
+import commissionerLogo from "../../assets/Commissioner.jpeg";
 
 export default function MDLogin({ onLogin }) {
   const [username, setUsername] = useState("");
@@ -44,8 +46,16 @@ export default function MDLogin({ onLogin }) {
       <div style={styles.leftPanel}>
         <div style={styles.leftContent}>
           <div style={styles.logoBlock}>
-            <div style={styles.logoCircle}>
-              <img src={tribalLogo} alt="ADI SAMPARK Logo" style={styles.logoImg} />
+            <div style={styles.logoRow}>
+              <div style={styles.logoCircle}>
+                <img src={tribalLogo} alt="Tribal Logo" style={styles.logoImg} />
+              </div>
+              <div style={styles.logoCircle}>
+                <img src={tdcLogo} alt="TDC Logo" style={styles.logoImg} />
+              </div>
+              <div style={styles.logoCircle}>
+                <img src={commissionerLogo} alt="Commissioner Logo" style={styles.logoImg} />
+              </div>
             </div>
           </div>
           <h1 style={styles.brandName}>ADI SAMPARK</h1>
@@ -157,6 +167,12 @@ const styles = {
   },
   leftContent: {},
   logoBlock: { marginBottom: "30px" },
+  logoRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "14px",
+    flexWrap: "wrap",
+  },
   logoCircle: {
     width: "60px",
     height: "60px",
