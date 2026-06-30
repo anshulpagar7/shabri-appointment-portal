@@ -165,10 +165,10 @@ function printAppointments(appointments, dateStr) {
       </head>
       <body>
         <div class="header">
-          <img src="${TDC_LOGO}" alt="ADI SAMPARK Logo" />
+          <img src="${TDC_LOGO}" alt="Shabri Logo" />
           <div class="header-center">
             <div class="org-name">Maharashtra State Co-operative Tribal Development Corporation Ltd.</div>
-            <div class="system-name">ADI SAMPARK — Smart Appointment Portal</div>
+            <div class="system-name">Shabri Smart Appointment Management System</div>
             <div class="report-title">Appointment Report &mdash; ${dateStr}</div>
           </div>
           <img src="${TRIBAL_LOGO}" alt="Tribal Logo" />
@@ -197,7 +197,7 @@ function printAppointments(appointments, dateStr) {
         </table>
 
         <div class="footer">
-          ADI SAMPARK — Smart Appointment Portal &nbsp;&middot;&nbsp;
+          Shabri Smart Appointment Management System &nbsp;&middot;&nbsp;
           Maharashtra State Co-operative Tribal Development Corporation Ltd. &nbsp;&middot;&nbsp;
           ${new Date().toLocaleDateString("en-IN")}
         </div>
