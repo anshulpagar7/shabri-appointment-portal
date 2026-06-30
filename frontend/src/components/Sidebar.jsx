@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import tdcLogo    from "../assets/tdc-logo.jpeg";
+import tdcLogo          from "../assets/tdc-logo.jpeg";
+import commissionerLogo from "../assets/Commissioner.jpeg";
 import tribalLogo from "../assets/tribal-logo.jpg";
 
 const NAV_ITEMS = [
@@ -59,11 +60,13 @@ export default function Sidebar({ active, setActive }) {
         <div style={styles.header}>
           {!collapsed ? (
             <>
-              {/* Dual logo row */}
+              {/* Triple logo row */}
               <div style={styles.logoRow}>
-                <img src={tribalLogo} alt="Tribal Logo" style={styles.logoImg} />
+                <img src={tribalLogo}       alt="Tribal Logo"       style={styles.logoImg} />
                 <div style={styles.logoDivider} />
-                <img src={tdcLogo} alt="TDC Logo" style={styles.logoImg} />
+                <img src={tdcLogo}          alt="TDC Logo"          style={styles.logoImg} />
+                <div style={styles.logoDivider} />
+                <img src={commissionerLogo} alt="Commissioner Logo" style={styles.logoImg} />
               </div>
 
               {/* Org name */}
