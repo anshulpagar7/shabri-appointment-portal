@@ -7,7 +7,7 @@ export default function MDLayout() {
   const navigate = useNavigate();
 
   function handleLogoutConfirm() {
-    localStorage.removeItem("mdLoggedIn");
+    sessionStorage.removeItem("mdLoggedIn");
     setShowDialog(false);
     navigate("/md/login");
   }
