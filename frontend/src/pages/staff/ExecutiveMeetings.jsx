@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRealtime } from "../../hooks/useRealtime";
+import { syncCalendarCreate, syncCalendarUpdate, syncCalendarDelete } from "../../lib/calendarSync";
 
 function timeToMinutes(time) {
   if (!time) return 0;
@@ -184,16 +185,63 @@ export default function ExecutiveMeetings() {
 
   const saveMeeting = async (data) => {
     if (editId) {
+      // ── UPDATE ──────────────────────────────────────────────────────────────
       const { error } = await supabase
         .from("executive_meetings")
         .update(data)
         .eq("id", editId);
       if (error) { console.log(error); alert("Failed to update: " + error.message); return; }
+
+      // Sync calendar update (non-blocking)
+      const existingMeeting = meetings.find(m => m.id === editId);
+      if (existingMeeting?.google_event_id) {
+        syncCalendarUpdate({
+          google_event_id:  existingMeeting.google_event_id,
+          // Map meeting fields to the calendar helper's expected shape
+          appointment_id:   `MTG-${editId}`,
+          citizen_name:     data.meeting_with,
+          purpose:          data.title,
+          appointment_date: data.meeting_date,
+          appointment_time: data.meeting_time,
+          appointment_end_time: data.meeting_end_time,
+          officer_name:     "Leena Bansod",
+          notes:            data.notes || null,
+        }).catch(e => console.error("[ExecutiveMeetings] calendar update failed:", e));
+      }
     } else {
-      const { error } = await supabase
+      // ── CREATE ──────────────────────────────────────────────────────────────
+      const { data: insertedRow, error } = await supabase
         .from("executive_meetings")
-        .insert([data]);
+        .insert([data])
+        .select()
+        .single();
       if (error) { console.log(error); alert("Failed to save: " + error.message); return; }
+
+      // Sync calendar create (non-blocking)
+      try {
+        const calResult = await syncCalendarCreate({
+          appointment_id:       `MTG-${insertedRow.id}`,
+          citizen_name:         data.meeting_with,
+          purpose:              data.title,
+          appointment_date:     data.meeting_date,
+          appointment_time:     data.meeting_time,
+          appointment_end_time: data.meeting_end_time,
+          appointment_duration: null,
+          officer_name:         "Leena Bansod",
+          notes:                data.notes || null,
+          mobile:               null,
+          location:             null,
+        });
+
+        if (calResult?.google_event_id) {
+          await supabase
+            .from("executive_meetings")
+            .update({ google_event_id: calResult.google_event_id })
+            .eq("id", insertedRow.id);
+        }
+      } catch (calErr) {
+        console.error("[ExecutiveMeetings] calendar create failed:", calErr);
+      }
     }
     closeForm();
     fetchMeetings();
@@ -250,6 +298,16 @@ export default function ExecutiveMeetings() {
       .update({ status: "Cancelled" })
       .eq("id", id);
     if (error) { console.log(error); alert("Failed to cancel: " + error.message); return; }
+
+    // Remove from calendar (non-blocking)
+    const meeting = meetings.find(m => m.id === id);
+    if (meeting?.google_event_id) {
+      syncCalendarDelete({
+        google_event_id: meeting.google_event_id,
+        appointment_id:  `MTG-${id}`,
+      }).catch(e => console.error("[ExecutiveMeetings] calendar delete failed:", e));
+    }
+
     fetchMeetings();
   };
 
