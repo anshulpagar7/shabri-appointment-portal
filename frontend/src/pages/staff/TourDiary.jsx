@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRealtime } from "../../hooks/useRealtime";
+import { syncCalendarCreate, syncCalendarUpdate, syncCalendarDelete } from "../../lib/calendarSync";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -266,11 +267,74 @@ export default function TourDiary() {
     };
 
     if (editId) {
+      // ── UPDATE ──────────────────────────────────────────────────────────────
       const { error } = await supabase.from("tour_diary").update(payload).eq("id", editId);
       if (error) { console.error(error); alert("Failed to update: " + error.message); setSaving(false); return; }
+
+      // Sync calendar update (non-blocking)
+      const existingTour = tours.find(t => t.id === editId);
+      if (existingTour?.google_event_id) {
+        syncCalendarUpdate({
+          google_event_id:      existingTour.google_event_id,
+          appointment_id:       `TOUR-${editId}`,
+          citizen_name:         `Official Tour — ${form.destination.trim()}`,
+          purpose:              form.purpose.trim(),
+          appointment_date:     form.start_date,
+          appointment_time:     "09:00 AM",
+          appointment_end_time: "06:00 PM",
+          appointment_duration: null,
+          officer_name:         "Leena Bansod",
+          location:             form.destination.trim(),
+          notes:                [
+            form.end_date && form.end_date !== form.start_date
+              ? `Tour: ${form.start_date} → ${form.end_date}`
+              : `Tour: ${form.start_date}`,
+            form.remarks || null,
+          ].filter(Boolean).join("\n") || null,
+        }).catch(e => console.error("[TourDiary] calendar update failed:", e));
+      }
     } else {
-      const { error } = await supabase.from("tour_diary").insert([payload]);
+      // ── CREATE ──────────────────────────────────────────────────────────────
+      const { data: insertedRow, error } = await supabase
+        .from("tour_diary")
+        .insert([payload])
+        .select()
+        .single();
       if (error) { console.error(error); alert("Failed to save: " + error.message); setSaving(false); return; }
+
+      // Sync calendar create (non-blocking)
+      try {
+        const days = daysBetween(form.start_date, form.end_date);
+        const calResult = await syncCalendarCreate({
+          appointment_id:       `TOUR-${insertedRow.id}`,
+          citizen_name:         `✈️ Official Tour — ${form.destination.trim()}`,
+          purpose:              form.purpose.trim(),
+          appointment_date:     form.start_date,
+          appointment_time:     "09:00 AM",
+          appointment_end_time: form.end_date && form.end_date !== form.start_date
+                                  ? null      // edge fn computes from duration
+                                  : "06:00 PM",
+          appointment_duration: days * 9 * 60, // approximate tour hours for display
+          officer_name:         "Leena Bansod",
+          location:             form.destination.trim(),
+          mobile:               null,
+          notes:                [
+            form.end_date && form.end_date !== form.start_date
+              ? `Tour dates: ${form.start_date} → ${form.end_date} (${days} day${days > 1 ? "s" : ""})`
+              : `Tour date: ${form.start_date}`,
+            form.remarks || null,
+          ].filter(Boolean).join("\n") || null,
+        });
+
+        if (calResult?.google_event_id) {
+          await supabase
+            .from("tour_diary")
+            .update({ google_event_id: calResult.google_event_id })
+            .eq("id", insertedRow.id);
+        }
+      } catch (calErr) {
+        console.error("[TourDiary] calendar create failed:", calErr);
+      }
     }
 
     setSaving(false);
@@ -294,6 +358,16 @@ export default function TourDiary() {
   const handleDelete = async (id) => {
     const { error } = await supabase.from("tour_diary").delete().eq("id", id);
     if (error) { console.error(error); alert("Failed to delete: " + error.message); return; }
+
+    // Remove from calendar (non-blocking)
+    const tour = tours.find(t => t.id === id);
+    if (tour?.google_event_id) {
+      syncCalendarDelete({
+        google_event_id: tour.google_event_id,
+        appointment_id:  `TOUR-${id}`,
+      }).catch(e => console.error("[TourDiary] calendar delete failed:", e));
+    }
+
     setDeleteConfirm(null);
     fetchTours();
   };
