@@ -951,6 +951,11 @@ export default function MDDashboard({ onLogout }) {
   const [popup, setPopup]               = useState(null);
   const [greeting, setGreeting]         = useState(getDynamicGreeting());
 
+  // ── Mobile / Desktop view toggle ─────────────────────────────────────────
+  const [isMobileView, setIsMobileView] = useState(
+    () => window.innerWidth < 768
+  );
+
   // ── Current Citizen timer state ───────────────────────────────────────────
   // Separate, dedicated popup so it never collides with the existing `popup`
   // (breaks / meetings / legacy appointment popup).
@@ -1419,12 +1424,41 @@ export default function MDDashboard({ onLogout }) {
           {onLogout && (
             <MDLogoutButton onClick={onLogout} />
           )}
+          {/* View toggle */}
+          <button
+            onClick={() => setIsMobileView(v => !v)}
+            title={isMobileView ? "Switch to Desktop View" : "Switch to Mobile View"}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: "rgba(255,255,255,0.15)",
+              border: "1.5px solid rgba(255,255,255,0.3)",
+              borderRadius: 10, padding: "7px 13px",
+              cursor: "pointer", color: "#fff", fontSize: 13, fontWeight: 700,
+              flexShrink: 0,
+            }}
+          >
+            {isMobileView ? "🖥️ Desktop" : "📱 Mobile"}
+          </button>
         </div>
       </div>
 
       <div style={{ padding: "32px 36px 48px", animation: "fadeSlideUp 0.4s ease" }}>
 
-        {/* WELCOME BANNER */}
+        {/* ── MOBILE VIEW ───────────────────────────────────────────────────── */}
+        {isMobileView ? (
+          <MobileDashboard
+            greeting={greeting}
+            appointments={appointments}
+            meetings={meetings}
+            tourDiary={tourDiary}
+            currentCitizen={currentCitizen}
+            waitingCitizens={waitingCitizens}
+            nextCitizen={nextCitizen}
+            completedCount={completedCount}
+            totalCount={totalCount}
+            progressPct={progressPct}
+          />
+        ) : (
         <div style={{ background: "linear-gradient(120deg, #1E3A8A 0%, #2563EB 50%, #7C3AED 100%)", borderRadius: 24, padding: "36px 40px", marginBottom: 28, display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 8px 32px rgba(37,99,235,0.35)", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", top: -40, right: 120, width: 200, height: 200, borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
           <div style={{ position: "absolute", bottom: -60, right: -20, width: 240, height: 240, borderRadius: "50%", background: "rgba(255,255,255,0.04)" }} />
@@ -1835,6 +1869,284 @@ export default function MDDashboard({ onLogout }) {
             )}
           </div>
         </div>
+        )} {/* end desktop view */}
+      </div>
+    </div>
+  );
+}
+
+// ─── Mobile Dashboard ─────────────────────────────────────────────────────────
+
+function MobileDashboard({
+  greeting, appointments, meetings, tourDiary,
+  currentCitizen, waitingCitizens, nextCitizen,
+  completedCount, totalCount, progressPct,
+}) {
+  const [activeTab, setActiveTab] = useState("home");
+
+  const today = getTodayLocalDate();
+  const activeTour = tourDiary.find(t => {
+    if (!t.start_date) return false;
+    const end = t.end_date || t.start_date;
+    return today >= t.start_date && today <= end && t.status !== "Cancelled";
+  }) || null;
+
+  const tabs = [
+    { key: "home",     icon: "🏠", label: "Home"     },
+    { key: "citizens", icon: "👥", label: "Queue"    },
+    { key: "meetings", icon: "🤝", label: "Meetings" },
+    { key: "tour",     icon: "✈️", label: "Tour"     },
+  ];
+
+  const statusColor = {
+    "Completed":  { bg: "#ECFDF5", color: "#059669" },
+    "In Cabin":   { bg: "#DBEAFE", color: "#2563EB" },
+    "Waiting":    { bg: "#FEF3C7", color: "#D97706" },
+    "Cancelled":  { bg: "#FEF2F2", color: "#DC2626" },
+    "No Show":    { bg: "#FEF2F2", color: "#DC2626" },
+  };
+
+  return (
+    <div style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 90 }}>
+
+      {/* ── Greeting Banner ── */}
+      <div style={{
+        background: "linear-gradient(135deg,#1E3A8A,#7C3AED)",
+        borderRadius: 20, padding: "22px 20px", marginBottom: 16,
+        position: "relative", overflow: "hidden",
+      }}>
+        <div style={{ position:"absolute", top:-30, right:-20, width:120, height:120, borderRadius:"50%", background:"rgba(255,255,255,0.06)" }} />
+        <p style={{ margin:"0 0 4px", fontSize:11, color:"rgba(255,255,255,0.65)", fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase" }}>Executive Dashboard</p>
+        <h2 style={{ margin:"0 0 10px", fontSize:22, fontWeight:800, color:"#fff", lineHeight:1.2 }}>{greeting}</h2>
+        <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+          <span style={{ background:"rgba(255,255,255,0.18)", borderRadius:99, padding:"5px 12px", fontSize:12, color:"#fff", fontWeight:700 }}>
+            👥 {totalCount} Citizens
+          </span>
+          <span style={{ background:"rgba(255,255,255,0.18)", borderRadius:99, padding:"5px 12px", fontSize:12, color:"#fff", fontWeight:700 }}>
+            🤝 {meetings.length} Meetings
+          </span>
+          {activeTour && (
+            <span style={{ background:"rgba(245,158,11,0.35)", borderRadius:99, padding:"5px 12px", fontSize:12, color:"#FDE68A", fontWeight:700 }}>
+              ✈️ On Tour
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ── Tab Content ── */}
+
+      {activeTab === "home" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+
+          {/* Stat pills row */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+            {[
+              { label:"Waiting",   value:waitingCitizens.length, color:"#D97706", bg:"linear-gradient(135deg,#F59E0B,#D97706)", icon:"⏳" },
+              { label:"Completed", value:completedCount,          color:"#059669", bg:"linear-gradient(135deg,#10B981,#059669)", icon:"✅" },
+              { label:"Meetings",  value:meetings.length,         color:"#2563EB", bg:"linear-gradient(135deg,#3B82F6,#2563EB)", icon:"🤝" },
+              { label:"Total",     value:totalCount,              color:"#7C3AED", bg:"linear-gradient(135deg,#8B5CF6,#7C3AED)", icon:"👥" },
+            ].map(s => (
+              <div key={s.label} style={{ background:s.bg, borderRadius:16, padding:"18px 16px", color:"#fff", boxShadow:`0 4px 14px ${s.color}40` }}>
+                <div style={{ fontSize:22, marginBottom:6 }}>{s.icon}</div>
+                <div style={{ fontSize:30, fontWeight:900, lineHeight:1 }}>{s.value}</div>
+                <div style={{ fontSize:11, fontWeight:700, opacity:0.85, marginTop:4, textTransform:"uppercase", letterSpacing:"0.05em" }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Progress bar */}
+          <div style={{ background:"#fff", borderRadius:16, padding:"16px 18px", boxShadow:"0 2px 12px rgba(0,0,0,0.06)" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+              <span style={{ fontSize:13, fontWeight:700, color:"#374151" }}>Daily Progress</span>
+              <span style={{ fontSize:13, fontWeight:800, color:"#2563EB" }}>{progressPct}%</span>
+            </div>
+            <div style={{ height:10, background:"#F3F4F6", borderRadius:99, overflow:"hidden" }}>
+              <div style={{ height:"100%", width:`${progressPct}%`, background:"linear-gradient(90deg,#2563EB,#7C3AED)", borderRadius:99, transition:"width 0.4s" }} />
+            </div>
+            <p style={{ margin:"6px 0 0", fontSize:11, color:"#9CA3AF" }}>{completedCount} of {totalCount} citizens completed today</p>
+          </div>
+
+          {/* Currently In Cabin */}
+          <div style={{ background:"#fff", borderRadius:16, padding:"18px", boxShadow:"0 2px 12px rgba(0,0,0,0.06)", border:"2px solid #DBEAFE" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+              <span style={{ width:9, height:9, borderRadius:"50%", background:"#3B82F6", display:"inline-block", animation:"pulse-ring 1.8s ease infinite" }} />
+              <span style={{ fontSize:11, fontWeight:800, color:"#2563EB", letterSpacing:"0.08em", textTransform:"uppercase" }}>Currently in Cabin</span>
+            </div>
+            {currentCitizen ? (
+              <div>
+                <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
+                  <div style={{ width:44, height:44, borderRadius:"50%", background:"linear-gradient(135deg,#DBEAFE,#EFF6FF)", border:"2px solid #BFDBFE", display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, fontWeight:800, color:"#2563EB", flexShrink:0 }}>
+                    {currentCitizen.citizen_name?.split(" ").map(n=>n[0]).join("").slice(0,2)}
+                  </div>
+                  <div>
+                    <p style={{ margin:0, fontSize:16, fontWeight:800, color:"#111827" }}>{currentCitizen.citizen_name}</p>
+                    <p style={{ margin:0, fontSize:12, color:"#6B7280" }}>{currentCitizen.purpose}</p>
+                  </div>
+                </div>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  <span style={{ fontSize:12, fontWeight:600, color:"#2563EB", background:"#EFF6FF", padding:"4px 10px", borderRadius:99, border:"1px solid #BFDBFE" }}>🕐 {currentCitizen.appointment_time}</span>
+                  {currentCitizen.appointment_duration && <span style={{ fontSize:12, fontWeight:600, color:"#059669", background:"#ECFDF5", padding:"4px 10px", borderRadius:99, border:"1px solid #A7F3D0" }}>⏱ {currentCitizen.appointment_duration} min</span>}
+                  <span style={{ fontSize:12, fontWeight:700, color:"#1E3A8A", background:"#EFF6FF", padding:"4px 10px", borderRadius:99, border:"1px solid #BFDBFE" }}>#{currentCitizen.appointment_id}</span>
+                </div>
+              </div>
+            ) : (
+              <div style={{ textAlign:"center", padding:"10px 0", color:"#9CA3AF" }}>
+                <div style={{ fontSize:28 }}>🪑</div>
+                <p style={{ margin:"6px 0 0", fontSize:13, fontWeight:600 }}>Cabin Available</p>
+              </div>
+            )}
+          </div>
+
+          {/* Next Citizen */}
+          {nextCitizen && (
+            <div style={{ background:"#fff", borderRadius:16, padding:"16px 18px", boxShadow:"0 2px 12px rgba(0,0,0,0.06)", border:"2px solid #D1FAE5" }}>
+              <p style={{ margin:"0 0 10px", fontSize:11, fontWeight:800, color:"#059669", letterSpacing:"0.08em", textTransform:"uppercase" }}>⏭ Next Citizen</p>
+              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ width:40, height:40, borderRadius:"50%", background:"linear-gradient(135deg,#D1FAE5,#ECFDF5)", border:"2px solid #A7F3D0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:800, color:"#059669", flexShrink:0 }}>
+                  {nextCitizen.citizen_name?.split(" ").map(n=>n[0]).join("").slice(0,2)}
+                </div>
+                <div>
+                  <p style={{ margin:0, fontSize:15, fontWeight:800, color:"#111827" }}>{nextCitizen.citizen_name}</p>
+                  <p style={{ margin:0, fontSize:12, color:"#6B7280" }}>{nextCitizen.purpose} · {nextCitizen.appointment_time}</p>
+                </div>
+                <span style={{ marginLeft:"auto", fontSize:14, fontWeight:900, color:"#10B981" }}>#{nextCitizen.appointment_id}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "citizens" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
+            <h3 style={{ margin:0, fontSize:17, fontWeight:800, color:"#111827" }}>Today's Queue</h3>
+            <span style={{ background:"#FEF3C7", color:"#D97706", fontSize:12, fontWeight:700, padding:"4px 12px", borderRadius:99, border:"1px solid #FDE68A" }}>{waitingCitizens.length} waiting</span>
+          </div>
+          {appointments.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"48px 0", color:"#9CA3AF" }}>
+              <div style={{ fontSize:44 }}>📋</div>
+              <p style={{ margin:"10px 0 0", fontSize:14, fontWeight:600 }}>No appointments today</p>
+            </div>
+          ) : (
+            appointments.map((c, i) => {
+              const sc = statusColor[c.status] || { bg:"#F1F5F9", color:"#64748B" };
+              return (
+                <div key={c.appointment_id ?? i} style={{ background:"#fff", borderRadius:14, padding:"14px 16px", boxShadow:"0 2px 8px rgba(0,0,0,0.05)", display:"flex", alignItems:"center", gap:12 }}>
+                  <div style={{ width:40, height:40, borderRadius:"50%", background:`hsl(${i*70+200},60%,90%)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:800, color:`hsl(${i*70+200},50%,35%)`, flexShrink:0 }}>
+                    {c.citizen_name?.split(" ").map(n=>n[0]).join("").slice(0,2)}
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <p style={{ margin:0, fontSize:14, fontWeight:700, color:"#111827", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.citizen_name}</p>
+                    <p style={{ margin:0, fontSize:12, color:"#6B7280", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.purpose}</p>
+                  </div>
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:4, flexShrink:0 }}>
+                    <span style={{ fontSize:12, fontWeight:700, color:"#374151" }}>🕐 {c.appointment_time}</span>
+                    <span style={{ fontSize:11, fontWeight:700, color:sc.color, background:sc.bg, padding:"2px 8px", borderRadius:99 }}>{c.status}</span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {activeTab === "meetings" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          <h3 style={{ margin:"0 0 4px", fontSize:17, fontWeight:800, color:"#111827" }}>Executive Meetings</h3>
+          {meetings.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"48px 0", color:"#9CA3AF" }}>
+              <div style={{ fontSize:44 }}>📭</div>
+              <p style={{ margin:"10px 0 0", fontSize:14, fontWeight:600 }}>No meetings today</p>
+            </div>
+          ) : (
+            meetings.map((m, i) => {
+              const linkValid = isMeetLinkValid(m.meet_link);
+              return (
+                <div key={m.id ?? i} style={{ background:"#fff", borderRadius:16, padding:"18px", boxShadow:"0 2px 12px rgba(0,0,0,0.06)", border:"1px solid #DBEAFE" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+                    <div style={{ flex:1 }}>
+                      <p style={{ margin:"0 0 2px", fontSize:11, fontWeight:700, color:"#6B7280", textTransform:"uppercase", letterSpacing:"0.06em" }}>{getMeetingTimeLabel(m.meeting_time)}</p>
+                      <h4 style={{ margin:0, fontSize:16, fontWeight:800, color:"#111827" }}>{m.title}</h4>
+                    </div>
+                    <span style={{ background:"#EFF6FF", color:"#2563EB", fontSize:13, fontWeight:700, padding:"4px 10px", borderRadius:99, border:"1px solid #BFDBFE", flexShrink:0, marginLeft:10 }}>{m.meeting_time}</span>
+                  </div>
+                  <p style={{ margin:"0 0 12px", fontSize:13, color:"#374151" }}>🏛️ {m.meeting_with}</p>
+                  {linkValid ? (
+                    <a href={m.meet_link} target="_blank" rel="noopener noreferrer" style={{ display:"block", background:"linear-gradient(135deg,#059669,#10B981)", color:"#fff", textDecoration:"none", padding:"11px 0", borderRadius:12, textAlign:"center", fontSize:14, fontWeight:700, boxShadow:"0 4px 12px rgba(16,185,129,0.3)" }}>
+                      🔗 Join Meeting
+                    </a>
+                  ) : (
+                    <div style={{ background:"#F3F4F6", borderRadius:12, padding:"10px 0", textAlign:"center", color:"#9CA3AF", fontSize:13, fontWeight:600 }}>🚫 No meeting link</div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {activeTab === "tour" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          <h3 style={{ margin:"0 0 4px", fontSize:17, fontWeight:800, color:"#111827" }}>Tour Diary</h3>
+          {activeTour ? (
+            <div style={{ background:"linear-gradient(135deg,#FFFBEB,#FEF3C7)", border:"1.5px solid #FDE68A", borderRadius:16, padding:"18px", boxShadow:"0 4px 14px rgba(245,158,11,0.15)" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+                <span style={{ fontSize:22 }}>✈️</span>
+                <span style={{ fontSize:11, fontWeight:800, color:"#D97706", letterSpacing:"0.06em", textTransform:"uppercase" }}>Currently Active Tour</span>
+              </div>
+              <p style={{ margin:"0 0 4px", fontSize:18, fontWeight:800, color:"#111827" }}>📍 {activeTour.destination}</p>
+              <p style={{ margin:"0 0 12px", fontSize:13, color:"#78350F" }}>{activeTour.purpose}</p>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                <span style={{ fontSize:12, fontWeight:600, background:"#fff", color:"#92400E", padding:"4px 10px", borderRadius:8, border:"1px solid #FDE68A" }}>📅 {activeTour.start_date} → {activeTour.end_date || activeTour.start_date}</span>
+              </div>
+            </div>
+          ) : (
+            <div style={{ background:"#F8FAFC", border:"1.5px dashed #E2E8F0", borderRadius:16, padding:"32px", textAlign:"center", color:"#9CA3AF" }}>
+              <div style={{ fontSize:40 }}>✈️</div>
+              <p style={{ margin:"10px 0 0", fontSize:14, fontWeight:600 }}>No active tour today</p>
+            </div>
+          )}
+          {/* All tours list */}
+          {tourDiary.filter(t => t !== activeTour).slice(0, 5).map((t, i) => {
+            const cfgs = { Upcoming:"#2563EB", Completed:"#059669", Cancelled:"#DC2626", Ongoing:"#D97706" };
+            const col = cfgs[t.status] || "#64748B";
+            return (
+              <div key={t.id ?? i} style={{ background:"#fff", borderRadius:14, padding:"14px 16px", boxShadow:"0 2px 8px rgba(0,0,0,0.04)", display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ flex:1 }}>
+                  <p style={{ margin:0, fontSize:14, fontWeight:700, color:"#111827" }}>📍 {t.destination}</p>
+                  <p style={{ margin:0, fontSize:12, color:"#6B7280" }}>{t.start_date}{t.end_date && t.end_date !== t.start_date ? ` → ${t.end_date}` : ""}</p>
+                </div>
+                <span style={{ fontSize:11, fontWeight:700, color:col, background:`${col}15`, padding:"3px 10px", borderRadius:99, border:`1px solid ${col}30`, flexShrink:0 }}>{t.status}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Bottom Tab Bar ── */}
+      <div style={{
+        position:"fixed", bottom:0, left:0, right:0,
+        background:"#fff", borderTop:"1px solid #E5E7EB",
+        display:"flex", zIndex:200,
+        boxShadow:"0 -4px 20px rgba(0,0,0,0.08)",
+      }}>
+        {tabs.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              flex:1, padding:"10px 0 8px",
+              border:"none", background:"transparent", cursor:"pointer",
+              display:"flex", flexDirection:"column", alignItems:"center", gap:3,
+              color: activeTab === tab.key ? "#2563EB" : "#94A3B8",
+              borderTop: activeTab === tab.key ? "2.5px solid #2563EB" : "2.5px solid transparent",
+              transition:"all 0.15s",
+            }}
+          >
+            <span style={{ fontSize:20 }}>{tab.icon}</span>
+            <span style={{ fontSize:10, fontWeight:700, letterSpacing:"0.04em" }}>{tab.label}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
