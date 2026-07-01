@@ -196,17 +196,15 @@ export default function ExecutiveMeetings() {
       const existingMeeting = meetings.find(m => m.id === editId);
       if (existingMeeting?.google_event_id) {
         syncCalendarUpdate({
-          google_event_id:  existingMeeting.google_event_id,
-          // Map meeting fields to the calendar helper's expected shape
-          appointment_id:   `MTG-${editId}`,
-          citizen_name:     data.meeting_with,
-          purpose:          data.title,
-          appointment_date: data.meeting_date,
-          appointment_time: data.meeting_time,
-          appointment_end_time: data.meeting_end_time,
-          officer_name:     "Leena Bansod",
-          notes:            data.notes || null,
-          meeting_link:     data.meet_link || null,
+          google_event_id:    existingMeeting.google_event_id,
+          appointment_id:     `MTG-${editId}`,
+          meeting_title:      data.title,
+          meeting_with:       data.meeting_with,
+          meeting_date:       data.meeting_date,
+          meeting_start_time: data.meeting_time,
+          meeting_end_time:   data.meeting_end_time,
+          meeting_link:       data.meet_link || null,
+          notes:              data.notes || null,
         }).catch(e => console.error("[ExecutiveMeetings] calendar update failed:", e));
       }
     } else {
@@ -221,18 +219,14 @@ export default function ExecutiveMeetings() {
       // Sync calendar create (non-blocking)
       try {
         const calResult = await syncCalendarCreate({
-          appointment_id:       `MTG-${insertedRow.id}`,
-          citizen_name:         data.meeting_with,
-          purpose:              data.title,
-          appointment_date:     data.meeting_date,
-          appointment_time:     data.meeting_time,
-          appointment_end_time: data.meeting_end_time,
-          appointment_duration: null,
-          officer_name:         "Leena Bansod",
-          notes:                data.notes || null,
-          mobile:               null,
-          location:             null,
-          meeting_link:         data.meet_link || null,
+          appointment_id:     `MTG-${insertedRow.id}`,
+          meeting_title:      data.title,
+          meeting_with:       data.meeting_with,
+          meeting_date:       data.meeting_date,
+          meeting_start_time: data.meeting_time,
+          meeting_end_time:   data.meeting_end_time,
+          meeting_link:       data.meet_link || null,
+          notes:              data.notes || null,
         });
 
         if (calResult?.google_event_id) {
