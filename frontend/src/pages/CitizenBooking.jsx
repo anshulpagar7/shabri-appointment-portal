@@ -662,13 +662,25 @@ export default function CitizenBooking() {
         <div style={landing.outer}>
           <div style={landing.hero}>
             <DualLogoRow />
-            <p style={landing.gov}>{t.government}</p>
-            <h1 style={landing.org}>{t.welcome}</h1>
             <p style={landing.taglineStyle}>{t.tagline}</p>
             <button style={landing.cta} onClick={() => setStep(1)}>
               <span style={{ marginRight: 8 }}>📅</span>
               {t.bookAppointment}
             </button>
+            {/* Welcome message */}
+            <div style={{
+              marginTop: 24,
+              background: "rgba(255,255,255,0.12)",
+              border: "1px solid rgba(255,255,255,0.25)",
+              borderRadius: 16,
+              padding: "18px 20px",
+              textAlign: "left",
+              maxWidth: 560,
+            }}>
+              <p style={{ margin: 0, fontSize: 13.5, color: "rgba(255,255,255,0.95)", lineHeight: 1.75, fontWeight: 400 }}>
+                {t.welcomeMessage}
+              </p>
+            </div>
           </div>
 
           <div style={landing.timingsCard}>
