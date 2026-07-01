@@ -12,6 +12,24 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// ─── Event colour map ─────────────────────────────────────────────────────────
+// appointment_id prefixes determine event type:
+//   citizen appointments → no prefix   → colorId "9"  (Blueberry)
+//   executive meetings   → "MTG-"      → colorId "3"  (Grape / Purple)
+//   tour diary entries   → "TOUR-"     → colorId "5"  (Banana / Yellow)
+
+const EVENT_COLORS: Record<string, string> = {
+  citizen:   "9",   // Blueberry
+  executive: "3",   // Grape (purple)
+  tour:      "5",   // Banana (yellow)
+};
+
+function resolveColorId(appointmentId: string): string {
+  if (appointmentId.startsWith("TOUR-")) return EVENT_COLORS.tour;
+  if (appointmentId.startsWith("MTG-"))  return EVENT_COLORS.executive;
+  return EVENT_COLORS.citizen;
+}
+
 // ─── Google OAuth helpers ─────────────────────────────────────────────────────
 
 async function getAccessToken(): Promise<string> {
@@ -181,7 +199,7 @@ function buildEventPayload(data: AppointmentPayload): Record<string, unknown> {
     start:       { dateTime: startISO, timeZone: "Asia/Kolkata" },
     end:         { dateTime: endISO,   timeZone: "Asia/Kolkata" },
     location:    "Adivasi Vikas Bhavan, Government of Maharashtra",
-    colorId:     "7",   // Peacock blue — distinguishable from personal events
+    colorId:     resolveColorId(data.appointment_id),
     reminders: {
       useDefault: false,
       overrides: [
