@@ -344,11 +344,14 @@ serve(async (req: Request) => {
     f => !(body as Record<string, unknown>)[f]
   );
 
-  const missingTyped = isExecutive
-    ? (["meeting_title", "meeting_with", "meeting_date", "meeting_start_time", "meeting_end_time"] as const)
-        .filter(f => !(body as unknown as Record<string, unknown>)[f])
-    : (["citizen_name", "purpose", "appointment_date", "appointment_time", "officer_name"] as const)
-        .filter(f => !(body as unknown as Record<string, unknown>)[f]);
+  // Delete only needs action + appointment_id + google_event_id — skip typed validation
+  const missingTyped = body.action === "delete"
+    ? []
+    : isExecutive
+      ? (["meeting_title", "meeting_with", "meeting_date", "meeting_start_time", "meeting_end_time"] as const)
+          .filter(f => !(body as unknown as Record<string, unknown>)[f])
+      : (["citizen_name", "purpose", "appointment_date", "appointment_time", "officer_name"] as const)
+          .filter(f => !(body as unknown as Record<string, unknown>)[f]);
 
   const missing = [...missingBase, ...missingTyped];
 

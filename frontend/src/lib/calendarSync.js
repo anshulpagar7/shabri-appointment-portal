@@ -1,43 +1,22 @@
 // src/lib/calendarSync.js
 // Adi Sampark — Google Calendar sync helpers.
-// Import this wherever you need to create / update / delete calendar events.
+//
+// Supports three event types — routing is handled by the edge function
+// based on the appointment_id prefix:
+//   Citizen appointments  → appointment_id: "SHA-XXXX"
+//   Executive meetings    → appointment_id: "MTG-{id}"
+//   Tour diary entries    → appointment_id: "TOUR-{id}"
+//
+// All fields are spread into the request body so nothing is silently dropped.
 
 import { supabase } from "./supabase";
 
 // ─── CREATE ──────────────────────────────────────────────────────────────────
-// Call this immediately after a successful appointment INSERT.
-// Returns { google_event_id, event_link } on success, or null on failure.
-// Failures are non-fatal — the appointment is already saved in Supabase.
 
-export async function syncCalendarCreate({
-  appointment_id,
-  citizen_name,
-  purpose,
-  appointment_date,
-  appointment_time,
-  appointment_end_time,
-  appointment_duration,
-  officer_name,
-  location,
-  mobile,
-  notes,
-}) {
+export async function syncCalendarCreate(fields) {
   try {
     const { data, error } = await supabase.functions.invoke("google-calendar", {
-      body: {
-        action: "create",
-        appointment_id,
-        citizen_name,
-        purpose,
-        appointment_date,
-        appointment_time,
-        appointment_end_time: appointment_end_time ?? null,
-        appointment_duration: appointment_duration ?? 5,
-        officer_name,
-        location:  location  ?? null,
-        mobile:    mobile    ?? null,
-        notes:     notes     ?? null,
-      },
+      body: { action: "create", ...fields },
     });
 
     if (error) {
@@ -54,46 +33,16 @@ export async function syncCalendarCreate({
 }
 
 // ─── UPDATE ──────────────────────────────────────────────────────────────────
-// Call this when an appointment is rescheduled.
-// google_event_id must be the value stored in your appointments table
-// after the original CREATE call.
 
-export async function syncCalendarUpdate({
-  google_event_id,
-  appointment_id,
-  citizen_name,
-  purpose,
-  appointment_date,
-  appointment_time,
-  appointment_end_time,
-  appointment_duration,
-  officer_name,
-  location,
-  mobile,
-  notes,
-}) {
-  if (!google_event_id) {
+export async function syncCalendarUpdate(fields) {
+  if (!fields?.google_event_id) {
     console.warn("[calendarSync] update skipped — no google_event_id");
     return null;
   }
 
   try {
     const { data, error } = await supabase.functions.invoke("google-calendar", {
-      body: {
-        action: "update",
-        google_event_id,
-        appointment_id,
-        citizen_name,
-        purpose,
-        appointment_date,
-        appointment_time,
-        appointment_end_time: appointment_end_time ?? null,
-        appointment_duration: appointment_duration ?? 5,
-        officer_name,
-        location: location ?? null,
-        mobile:   mobile   ?? null,
-        notes:    notes    ?? null,
-      },
+      body: { action: "update", ...fields },
     });
 
     if (error) {
@@ -110,10 +59,9 @@ export async function syncCalendarUpdate({
 }
 
 // ─── DELETE ──────────────────────────────────────────────────────────────────
-// Call this when an appointment is cancelled / deleted.
 
-export async function syncCalendarDelete({ google_event_id, appointment_id }) {
-  if (!google_event_id) {
+export async function syncCalendarDelete(fields) {
+  if (!fields?.google_event_id) {
     console.warn("[calendarSync] delete skipped — no google_event_id");
     return null;
   }
@@ -122,14 +70,8 @@ export async function syncCalendarDelete({ google_event_id, appointment_id }) {
     const { data, error } = await supabase.functions.invoke("google-calendar", {
       body: {
         action:          "delete",
-        google_event_id,
-        appointment_id,
-        // Minimum required by the edge function validator
-        citizen_name:        "—",
-        purpose:             "—",
-        appointment_date:    "2000-01-01",
-        appointment_time:    "12:00 PM",
-        officer_name:        "—",
+        google_event_id: fields.google_event_id,
+        appointment_id:  fields.appointment_id,
       },
     });
 
@@ -138,7 +80,7 @@ export async function syncCalendarDelete({ google_event_id, appointment_id }) {
       return null;
     }
 
-    console.log("[calendarSync] deleted:", google_event_id);
+    console.log("[calendarSync] deleted:", fields.google_event_id);
     return data;
   } catch (err) {
     console.error("[calendarSync] delete exception:", err);
