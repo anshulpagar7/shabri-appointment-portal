@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../../lib/supabase";
 import { useRealtime } from "../../hooks/useRealtime";
+import { syncCalendarUpdate, syncCalendarDelete } from "../../lib/calendarSync";
 
 // ─── Status Config ────────────────────────────────────────────────────────────
 
@@ -32,6 +33,35 @@ function formatTimeRange(startTime, endTime) {
 function formatDuration(minutes) {
   if (!minutes && minutes !== 0) return "—";
   return `${minutes} min`;
+}
+
+// ─── Auto-status helpers ──────────────────────────────────────────────────────
+
+/** Parse "12:05 PM" or "14:05" → total minutes since midnight */
+function parseTimeToMinutes(timeStr) {
+  if (!timeStr) return null;
+  const s = timeStr.trim();
+  const ampm = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (ampm) {
+    let h = parseInt(ampm[1], 10);
+    const m = parseInt(ampm[2], 10);
+    if (ampm[3].toUpperCase() === "PM" && h !== 12) h += 12;
+    if (ampm[3].toUpperCase() === "AM" && h === 12) h  = 0;
+    return h * 60 + m;
+  }
+  const parts = s.split(":");
+  if (parts.length >= 2) return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+  return null;
+}
+
+function nowMinutes() {
+  const n = new Date();
+  return n.getHours() * 60 + n.getMinutes();
+}
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 
 // ─── CSV / Excel Export ───────────────────────────────────────────────────────
@@ -197,7 +227,7 @@ function printAppointments(appointments, dateStr) {
         </table>
 
         <div class="footer">
-          Shabri Smart Appointment Management System &nbsp;&middot;&nbsp;
+          ADI SAMPARK — Smart Appointment Portal &nbsp;&middot;&nbsp;
           Maharashtra State Co-operative Tribal Development Corporation Ltd. &nbsp;&middot;&nbsp;
           ${new Date().toLocaleDateString("en-IN")}
         </div>
@@ -220,14 +250,20 @@ export default function Appointments() {
   const [filterOfficer, setFilterOfficer] = useState("All");
   const [selectedDate, setSelectedDate] = useState(toDateString(new Date()));
 
+  // Track which appointment IDs the auto-engine has already transitioned
+  // so we don't fire duplicate updates on every tick
+  const autoTransitionedRef = useRef(new Set());
+
   useEffect(() => {
+    // Reset transition tracking whenever the date changes
+    autoTransitionedRef.current = new Set();
     fetchAppointments();
   }, [selectedDate]);
 
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
     const { data, error } = await supabase
       .from("appointments")
-      .select("*, appointment_duration, appointment_end_time")
+      .select("*, appointment_duration, appointment_end_time, google_event_id")
       .eq("appointment_date", selectedDate)
       .order("appointment_time", { ascending: true });
 
@@ -236,8 +272,89 @@ export default function Appointments() {
     setAppointments(data);
     const cabin = data.find(a => a.status === "In Cabin");
     setCabinCitizen(cabin || null);
-  };
+  }, [selectedDate]);
 
+  // ── Auto-status engine ────────────────────────────────────────────────────
+  // Runs every 30 seconds when viewing today.
+  // Waiting  → In Cabin  : when current time >= appointment_time
+  // In Cabin → Completed : when current time >= appointment_end_time
+  //                        (falls back to appointment_time + duration or +10 min)
+  useEffect(() => {
+    async function runAutoEngine() {
+      // Only auto-advance for today's appointments
+      if (selectedDate !== todayStr()) return;
+
+      const now = nowMinutes();
+      const toTransition = [];
+
+      for (const appt of appointments) {
+        const key = `${appt.id}-${appt.status}`;
+        if (autoTransitionedRef.current.has(key)) continue;
+
+        const startMin = parseTimeToMinutes(appt.appointment_time);
+        if (startMin === null) continue;
+
+        if (appt.status === "Waiting" && now >= startMin) {
+          toTransition.push({ appt, newStatus: "In Cabin", key });
+          continue;
+        }
+
+        if (appt.status === "In Cabin") {
+          // Compute end minutes
+          let endMin = parseTimeToMinutes(appt.appointment_end_time);
+          if (endMin === null) {
+            endMin = startMin + (appt.appointment_duration ?? 10);
+          }
+          if (now >= endMin) {
+            toTransition.push({ appt, newStatus: "Completed", key });
+          }
+        }
+      }
+
+      if (toTransition.length === 0) return;
+
+      for (const { appt, newStatus, key } of toTransition) {
+        autoTransitionedRef.current.add(key);
+
+        const { error } = await supabase
+          .from("appointments")
+          .update({ status: newStatus })
+          .eq("id", appt.id);
+
+        if (error) {
+          console.error("[AutoEngine] status update failed:", error);
+          autoTransitionedRef.current.delete(key); // allow retry
+          continue;
+        }
+
+        // Sync calendar on auto-completion
+        if (newStatus === "Completed" && appt.google_event_id) {
+          syncCalendarUpdate({
+            google_event_id:      appt.google_event_id,
+            appointment_id:       appt.appointment_id,
+            citizen_name:         appt.citizen_name,
+            purpose:              appt.purpose,
+            appointment_date:     appt.appointment_date,
+            appointment_time:     appt.appointment_time,
+            appointment_end_time: appt.appointment_end_time,
+            appointment_duration: appt.appointment_duration,
+            officer_name:         appt.officer_name,
+            mobile:               appt.mobile,
+            location:             appt.location,
+          }).catch(e => console.error("[AutoEngine] calendar sync:", e));
+        }
+      }
+
+      // Refresh to reflect new statuses
+      if (toTransition.length > 0) fetchAppointments();
+    }
+
+    runAutoEngine();
+    const interval = setInterval(runAutoEngine, 30_000);
+    return () => clearInterval(interval);
+  }, [appointments, selectedDate, fetchAppointments]);
+
+  // ── Manual status update (staff override) ────────────────────────────────
   const updateStatus = async (appointment, newStatus) => {
     if (newStatus === "In Cabin" && cabinCitizen && cabinCitizen.id !== appointment.id) {
       alert("Please complete current citizen first.");
@@ -247,12 +364,46 @@ export default function Appointments() {
       console.log("updateStatus: missing primary key 'id'", appointment);
       return;
     }
+
     const { error } = await supabase
       .from("appointments")
       .update({ status: newStatus })
       .eq("id", appointment.id);
 
-    if (error) { console.log("updateStatus error:", error); alert("Failed to update status: " + error.message); return; }
+    if (error) {
+      console.log("updateStatus error:", error);
+      alert("Failed to update status: " + error.message);
+      return;
+    }
+
+    // Calendar sync on manual status changes
+    if (appointment.google_event_id) {
+      if (newStatus === "Completed" || newStatus === "In Cabin") {
+        // Update the calendar event description to reflect new status
+        syncCalendarUpdate({
+          google_event_id:      appointment.google_event_id,
+          appointment_id:       appointment.appointment_id,
+          citizen_name:         appointment.citizen_name,
+          purpose:              appointment.purpose,
+          appointment_date:     appointment.appointment_date,
+          appointment_time:     appointment.appointment_time,
+          appointment_end_time: appointment.appointment_end_time,
+          appointment_duration: appointment.appointment_duration,
+          officer_name:         appointment.officer_name,
+          mobile:               appointment.mobile,
+          location:             appointment.location,
+        }).catch(e => console.error("[updateStatus] calendar sync:", e));
+      }
+
+      if (newStatus === "No Show" || newStatus === "Reschedule Required") {
+        // Remove from calendar — citizen won't be coming
+        syncCalendarDelete({
+          google_event_id: appointment.google_event_id,
+          appointment_id:  appointment.appointment_id,
+        }).catch(e => console.error("[updateStatus] calendar delete:", e));
+      }
+    }
+
     fetchAppointments();
   };
 
@@ -462,7 +613,7 @@ export default function Appointments() {
                       </span>
                     </td>
 
-                    {/* Actions — unchanged workflow */}
+                    {/* Actions — unchanged workflow + manual override always available */}
                     <td style={styles.td}>
                       <div style={styles.actionBtns}>
                         {a.status === "Waiting" && (
